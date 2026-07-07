@@ -1,0 +1,11 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  run:
+    desc: Run application
+    cmds:
+      - go run ./cmd/seller-service --config=./config/local.yaml
