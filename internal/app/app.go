@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/barnigator/eshop-seller-service/internal/config"
+	"github.com/barnigator/eshop-seller-service/internal/grpc/handler"
 	"github.com/barnigator/eshop-seller-service/internal/grpc/server"
 )
 
@@ -22,7 +23,9 @@ func (a *App) Run() error {
 		a.cfg.GRPC.Port,
 	)
 
-	srv := server.New(a.cfg.GRPC.Port)
+	sellerHandler := handler.New()
 
-	return srv.Run()
+	grcpServer := server.New(a.cfg.GRPC.Port, sellerHandler)
+
+	return grcpServer.Run()
 }

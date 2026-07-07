@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	sellerv1 "github.com/barnigator/protos/gen/go/seller/v1"
 	"google.golang.org/grpc"
 )
 
@@ -12,8 +13,11 @@ type Server struct {
 	port       int
 }
 
-func New(port int) *Server {
+func New(port int, handler sellerv1.SellerServiceServer) *Server {
 	grpcServer := grpc.NewServer()
+
+	sellerv1.RegisterSellerServiceServer(grpcServer, handler)
+
 	return &Server{grpcServer, port}
 }
 
