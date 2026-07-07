@@ -9,3 +9,8 @@ tasks:
     desc: Run application
     cmds:
       - go run ./cmd/seller-service --config=./config/local.yaml
+
+  client:
+    desc: Run client
+    cmds:
+      - go run ./examples/seller-client
