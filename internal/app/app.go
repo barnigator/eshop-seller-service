@@ -7,7 +7,7 @@ import (
 	"github.com/barnigator/eshop-seller-service/internal/config"
 	"github.com/barnigator/eshop-seller-service/internal/grpc/handler"
 	"github.com/barnigator/eshop-seller-service/internal/grpc/server"
-	"github.com/barnigator/eshop-seller-service/internal/storage/postgres"
+	"github.com/barnigator/eshop-seller-service/internal/repository/postgres"
 	"github.com/barnigator/eshop-seller-service/internal/usecase"
 )
 
