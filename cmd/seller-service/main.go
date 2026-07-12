@@ -6,9 +6,11 @@ import (
 
 	"github.com/barnigator/eshop-seller-service/internal/app"
 	"github.com/barnigator/eshop-seller-service/internal/config"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	_ = godotenv.Load()
 	cfg := config.MustLoad()
 
 	application := app.New(cfg)

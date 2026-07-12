@@ -9,13 +9,18 @@ import (
 )
 
 type Config struct {
-	Env  string     `yaml:"env" env-default:"local"`
-	GRPC GRPCConfig `yaml:"grpc" env-required:"true"`
+	Env      string         `yaml:"env" env-default:"local"`
+	GRPC     GRPCConfig     `yaml:"grpc" env-required:"true"`
+	Postgres PostgresConfig `yaml:"postgres"`
 }
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
+}
+
+type PostgresConfig struct {
+	DSN string `yaml:"dsn" env:"POSTGRES_DSN" env-required:"true"`
 }
 
 func MustLoad() *Config {
