@@ -7,7 +7,6 @@ import (
 	"github.com/barnigator/eshop-seller-service/internal/config"
 	"github.com/barnigator/eshop-seller-service/internal/grpc/handler"
 	"github.com/barnigator/eshop-seller-service/internal/grpc/server"
-	"github.com/barnigator/eshop-seller-service/internal/storage/memory"
 	"github.com/barnigator/eshop-seller-service/internal/storage/postgres"
 	"github.com/barnigator/eshop-seller-service/internal/usecase"
 )
@@ -28,16 +27,16 @@ func (a *App) Run() error {
 		a.cfg.Postgres.DSN != "",
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), a.cfg.GRPC.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), a.cfg.App.Timeout)
 	defer cancel()
 
-	pool, err := postgres.New(ctx, a.cfg.Postgres.DSN)
+	pool, err := postgres.NewPool(ctx, a.cfg.Postgres.DSN)
 	if err != nil {
-		return err
+		return fmt.Errorf("initialize postgres pool: %w", err)
 	}
 	defer pool.Close()
 
-	sellerRepo := memory.New()
+	sellerRepo := postgres.New(pool)
 
 	sellerUseCase := usecase.New(sellerRepo)
 

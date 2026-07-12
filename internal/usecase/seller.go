@@ -23,10 +23,12 @@ func (uc *SellerUseCase) GetSellerStatus(ctx context.Context, sellerID string) (
 	if sellerID == "" {
 		return domain.SellerStatusUnspecified, domain.ErrSellerIDRequired
 	}
+
 	id, err := uuid.Parse(sellerID)
 	if err != nil {
 		return domain.SellerStatusUnspecified, domain.ErrInvalidSellerID
 	}
+
 	seller, err := uc.repo.GetSellerByID(ctx, id)
 	if err != nil {
 		return domain.SellerStatusUnspecified, err

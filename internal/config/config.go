@@ -12,6 +12,7 @@ type Config struct {
 	Env      string         `yaml:"env" env-default:"local"`
 	GRPC     GRPCConfig     `yaml:"grpc" env-required:"true"`
 	Postgres PostgresConfig `yaml:"postgres"`
+	App      AppConfig      `yaml:"app"`
 }
 
 type GRPCConfig struct {
@@ -21,6 +22,10 @@ type GRPCConfig struct {
 
 type PostgresConfig struct {
 	DSN string `yaml:"dsn" env:"POSTGRES_DSN" env-required:"true"`
+}
+
+type AppConfig struct {
+	Timeout time.Duration `yaml:"startup_timeout"`
 }
 
 func MustLoad() *Config {

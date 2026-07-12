@@ -5,8 +5,8 @@ import (
 	sellerv1 "github.com/barnigator/protos/gen/go/seller/v1"
 )
 
-func convertSellerStatus(st domain.SellerStatus) sellerv1.SellerStatus {
-	switch st {
+func convertSellerStatus(status domain.SellerStatus) sellerv1.SellerStatus {
+	switch status {
 	case domain.SellerStatusActive:
 		return sellerv1.SellerStatus_SELLER_STATUS_ACTIVE
 	case domain.SellerStatusArchived:

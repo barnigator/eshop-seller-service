@@ -1,5 +1,8 @@
 env: "local"
 
+app:
+  startup_timeout: 5s
+
 grpc:
   port: 44045
   timeout: 5s
