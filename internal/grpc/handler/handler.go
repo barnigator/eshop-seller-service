@@ -13,6 +13,7 @@ import (
 type SellerUseCase interface {
 	GetSellerStatus(ctx context.Context, sellerID string) (domain.SellerStatus, error)
 	CreateSeller(ctx context.Context, userID string, brandName string, description string) (domain.Seller, error)
+	GetSeller(ctx context.Context, sellerID string) (domain.Seller, error)
 }
 
 type Handler struct {
@@ -61,6 +62,26 @@ func (h *Handler) CreateSeller(ctx context.Context, req *sellerv1.CreateSellerRe
 			return nil, status.Error(codes.Internal, "internal error")
 		}
 	}
+	return &sellerv1.SellerResponse{
+		Seller: convertSeller(seller),
+	}, nil
+}
+
+func (h *Handler) GetSeller(ctx context.Context, req *sellerv1.GetSellerRequest) (*sellerv1.SellerResponse, error) {
+	seller, err := h.uc.GetSeller(ctx, req.SellerId)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrSellerIDRequired):
+			return nil, status.Error(codes.InvalidArgument, domain.ErrSellerIDRequired.Error())
+		case errors.Is(err, domain.ErrInvalidSellerID):
+			return nil, status.Error(codes.InvalidArgument, domain.ErrInvalidSellerID.Error())
+		case errors.Is(err, domain.ErrSellerNotFound):
+			return nil, status.Error(codes.NotFound, domain.ErrSellerNotFound.Error())
+		default:
+			return nil, status.Error(codes.Internal, "internal error")
+		}
+	}
+
 	return &sellerv1.SellerResponse{
 		Seller: convertSeller(seller),
 	}, nil

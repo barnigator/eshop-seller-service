@@ -42,6 +42,14 @@ func main() {
 	//	тест 6. создаем продавца с тем же id, c тем же брендом
 	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "adidas", "very nice")
 
+	// тест 7. получаем продавца, который есть
+	checkGetSeller(client, "550e8400-e29b-41d4-a716-446655440000")
+
+	//	тест 8. получаем продавца, которого нет
+	checkGetSeller(client, "000e8400-e29b-41d4-a716-446655440000")
+
+	//	тест 9. получаем продавца с помощью невалидного uuid
+	checkGetSeller(client, "invalid uuid")
 }
 
 func fatal(format string, err error) {
@@ -85,4 +93,21 @@ func checkCreateSeller(client sellerv1.SellerServiceClient, userID, brandName, d
 	}
 
 	fmt.Println("seller created:", resp.Seller)
+}
+
+func checkGetSeller(client sellerv1.SellerServiceClient, sellerID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &sellerv1.GetSellerRequest{
+		SellerId: sellerID,
+	}
+
+	resp, err := client.GetSeller(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to get seller: %v\n", err)
+		return
+	}
+
+	fmt.Println("seller:", resp.Seller)
 }

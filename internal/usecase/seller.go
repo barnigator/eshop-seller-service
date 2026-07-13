@@ -27,12 +27,12 @@ func (uc *SellerUseCase) GetSellerStatus(ctx context.Context, sellerID string) (
 		return domain.SellerStatusUnspecified, domain.ErrSellerIDRequired
 	}
 
-	id, err := uuid.Parse(sellerID)
+	sellerUUID, err := uuid.Parse(sellerID)
 	if err != nil {
 		return domain.SellerStatusUnspecified, domain.ErrInvalidSellerID
 	}
 
-	seller, err := uc.repo.GetSellerByID(ctx, id)
+	seller, err := uc.repo.GetSellerByID(ctx, sellerUUID)
 	if err != nil {
 		return domain.SellerStatusUnspecified, err
 	}
@@ -75,4 +75,22 @@ func (uc *SellerUseCase) CreateSeller(ctx context.Context, userID string, brandN
 	}
 
 	return createdSeller, nil
+}
+
+func (uc *SellerUseCase) GetSeller(ctx context.Context, sellerID string) (domain.Seller, error) {
+	if sellerID == "" {
+		return domain.Seller{}, domain.ErrSellerIDRequired
+	}
+
+	sellerUUID, err := uuid.Parse(sellerID)
+	if err != nil {
+		return domain.Seller{}, domain.ErrInvalidSellerID
+	}
+
+	seller, err := uc.repo.GetSellerByID(ctx, sellerUUID)
+	if err != nil {
+		return domain.Seller{}, err
+	}
+
+	return seller, nil
 }
