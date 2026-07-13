@@ -8,10 +8,12 @@ import (
 	"github.com/barnigator/eshop-seller-service/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const getSellerByID = `
+const (
+	getSellerByIDQuery = `
 		SELECT
 			id, 
 			user_id, 
@@ -22,6 +24,22 @@ const getSellerByID = `
 		WHERE id = $1  
 		  AND deleted_at IS NULL;
 `
+	createSellerQuery = `
+		INSERT INTO sellers (
+			user_id,
+			brand_name,
+			description,
+			status
+		)
+		VALUES ($1, $2, $3, $4)
+		RETURNING 
+			id, 
+			user_id, 
+			brand_name, 
+			description, 
+			status;
+`
+)
 
 type SellerRepository struct {
 	pool *pgxpool.Pool
@@ -37,7 +55,7 @@ func (s *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID
 
 	err := s.pool.QueryRow(
 		ctx,
-		getSellerByID,
+		getSellerByIDQuery,
 		sellerID,
 	).Scan(
 		&seller.ID,
@@ -52,10 +70,55 @@ func (s *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID
 		}
 		return domain.Seller{}, fmt.Errorf("get seller by id: %w", err)
 	}
-	seller.Status, err = convertSellerStatus(status)
+
+	seller.Status, err = convertStringToSellerStatus(status)
 	if err != nil {
-		return domain.Seller{}, fmt.Errorf("convert seller status: %w", err)
+		return domain.Seller{}, fmt.Errorf("convert string to seller status: %w", err)
 	}
 
 	return seller, nil
+}
+
+func (s *SellerRepository) CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error) {
+	var createdSeller domain.Seller
+	var status string
+
+	status, err := convertSellerStatusToString(seller.Status)
+	if err != nil {
+		return domain.Seller{}, fmt.Errorf("convert seller status to string: %w", err)
+	}
+
+	err = s.pool.QueryRow(
+		ctx,
+		createSellerQuery,
+		seller.UserID,
+		seller.BrandName,
+		seller.Description,
+		status,
+	).Scan(
+		&createdSeller.ID,
+		&createdSeller.UserID,
+		&createdSeller.BrandName,
+		&createdSeller.Description,
+		&status,
+	)
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) &&
+			pgErr.Code == "23505" &&
+			pgErr.ConstraintName == "ux_sellers_user_brand_name_active" {
+			return domain.Seller{}, domain.ErrBrandAlreadyExists
+		}
+
+		return domain.Seller{}, fmt.Errorf("create seller: %w", err)
+	}
+
+	createdSeller.Status, err = convertStringToSellerStatus(status)
+	if err != nil {
+		return domain.Seller{}, fmt.Errorf("convert string to seller status: %w", err)
+	}
+
+	return createdSeller, nil
 }

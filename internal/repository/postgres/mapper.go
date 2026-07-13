@@ -6,7 +6,7 @@ import (
 	"github.com/barnigator/eshop-seller-service/internal/domain"
 )
 
-func convertSellerStatus(status string) (domain.SellerStatus, error) {
+func convertStringToSellerStatus(status string) (domain.SellerStatus, error) {
 	switch status {
 	case "active":
 		return domain.SellerStatusActive, nil
@@ -19,7 +19,23 @@ func convertSellerStatus(status string) (domain.SellerStatus, error) {
 	case "rejected":
 		return domain.SellerStatusRejected, nil
 	default:
-		return domain.SellerStatusUnspecified, fmt.Errorf("%w: %s", ErrUnknownSellerStatus, status)
+		return domain.SellerStatusUnspecified, fmt.Errorf("%w: %s", ErrUnknownDatabaseSellerStatus, status)
 	}
+}
 
+func convertSellerStatusToString(status domain.SellerStatus) (string, error) {
+	switch status {
+	case domain.SellerStatusActive:
+		return "active", nil
+	case domain.SellerStatusArchived:
+		return "archived", nil
+	case domain.SellerStatusBlocked:
+		return "blocked", nil
+	case domain.SellerStatusPending:
+		return "pending", nil
+	case domain.SellerStatusRejected:
+		return "rejected", nil
+	default:
+		return "", fmt.Errorf("%w: %v", ErrUnknownDomainSellerStatus, status)
+	}
 }

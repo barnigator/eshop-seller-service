@@ -2,4 +2,7 @@ package postgres
 
 import "errors"
 
-var ErrUnknownSellerStatus = errors.New("invalid seller status from database")
+var (
+	ErrUnknownDatabaseSellerStatus = errors.New("invalid seller status from database")
+	ErrUnknownDomainSellerStatus   = errors.New("invalid seller status from domain")
+)

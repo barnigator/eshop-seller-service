@@ -23,3 +23,13 @@ func convertSellerStatus(status domain.SellerStatus) sellerv1.SellerStatus {
 
 	return sellerv1.SellerStatus_SELLER_STATUS_UNSPECIFIED
 }
+
+func convertSeller(seller domain.Seller) *sellerv1.Seller {
+	return &sellerv1.Seller{
+		Id:          seller.ID.String(),
+		UserId:      seller.UserID.String(),
+		BrandName:   seller.BrandName,
+		Description: seller.Description,
+		Status:      convertSellerStatus(seller.Status),
+	}
+}

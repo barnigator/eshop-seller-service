@@ -33,6 +33,15 @@ func main() {
 	//	тест 3. невалидный uuid
 	checkSellerStatus(client, "invalid uuid")
 
+	//	тест 4. создаем продавца
+	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "Nike", "  cool  ")
+
+	//	тест 5. создаем продавца с тем же id, но с другим брендом
+	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "  Adidas  ", "nice    ")
+
+	//	тест 6. создаем продавца с тем же id, c тем же брендом
+	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "adidas", "very nice")
+
 }
 
 func fatal(format string, err error) {
@@ -57,4 +66,23 @@ func checkSellerStatus(client sellerv1.SellerServiceClient, sellerID string) {
 
 	fmt.Println("seller status:", resp.Status)
 
+}
+
+func checkCreateSeller(client sellerv1.SellerServiceClient, userID, brandName, description string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &sellerv1.CreateSellerRequest{
+		UserId:      userID,
+		BrandName:   brandName,
+		Description: description,
+	}
+
+	resp, err := client.CreateSeller(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to create seller: %v\n", err)
+		return
+	}
+
+	fmt.Println("seller created:", resp.Seller)
 }

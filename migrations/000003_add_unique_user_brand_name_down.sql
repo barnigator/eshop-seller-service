@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS ux_sellers_user_brand_name_active;
