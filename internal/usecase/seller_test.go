@@ -12,32 +12,34 @@ import (
 
 type fakeSellerRepository struct {
 	seller domain.Seller
+	called bool
 	err    error
 
 	receivedSeller domain.Seller
 	createResult   domain.Seller
-	createCalled   bool
 	createErr      error
 }
 
 func (f *fakeSellerRepository) GetSellerByID(_ context.Context, _ uuid.UUID) (domain.Seller, error) {
+	f.called = true
 	return f.seller, f.err
 }
 
 func (f *fakeSellerRepository) CreateSeller(_ context.Context, seller domain.Seller) (domain.Seller, error) {
 	f.receivedSeller = seller
-	f.createCalled = true
+	f.called = true
 	return f.createResult, f.createErr
 }
 
 func TestSellerUseCase_GetSeller(t *testing.T) {
 	tests := []struct {
-		name           string
-		sellerID       string
-		repositoryData domain.Seller
-		repositoryErr  error
-		expectedSeller domain.Seller
-		expectedErr    error
+		name               string
+		sellerID           string
+		repositoryData     domain.Seller
+		repositoryErr      error
+		expectedSeller     domain.Seller
+		expectedErr        error
+		expectedRepoCalled bool
 	}{
 		{
 			name:     "success",
@@ -53,31 +55,27 @@ func TestSellerUseCase_GetSeller(t *testing.T) {
 				BrandName: "Adidas",
 				Status:    domain.SellerStatusActive,
 			},
-			expectedErr: nil,
+			expectedErr:        nil,
+			expectedRepoCalled: true,
 		},
 		{
-			name:           "empty seller_id",
-			sellerID:       "",
-			repositoryData: domain.Seller{},
-			repositoryErr:  nil,
-			expectedSeller: domain.Seller{},
-			expectedErr:    domain.ErrSellerIDRequired,
+			name:               "empty seller_id",
+			sellerID:           "",
+			expectedErr:        domain.ErrSellerIDRequired,
+			expectedRepoCalled: false,
 		},
 		{
-			name:           "invalid seller_id",
-			sellerID:       "invalid uuid",
-			repositoryData: domain.Seller{},
-			repositoryErr:  nil,
-			expectedSeller: domain.Seller{},
-			expectedErr:    domain.ErrInvalidSellerID,
+			name:               "invalid seller_id",
+			sellerID:           "invalid uuid",
+			expectedErr:        domain.ErrInvalidSellerID,
+			expectedRepoCalled: false,
 		},
 		{
-			name:           "repository error",
-			sellerID:       "550e8400-e29b-41d4-a716-446655440000",
-			repositoryData: domain.Seller{},
-			repositoryErr:  domain.ErrSellerNotFound,
-			expectedSeller: domain.Seller{},
-			expectedErr:    domain.ErrSellerNotFound,
+			name:               "repository error",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440000",
+			repositoryErr:      domain.ErrSellerNotFound,
+			expectedErr:        domain.ErrSellerNotFound,
+			expectedRepoCalled: true,
 		},
 	}
 
@@ -91,6 +89,10 @@ func TestSellerUseCase_GetSeller(t *testing.T) {
 			uc := New(repo)
 
 			seller, err := uc.GetSeller(context.Background(), tt.sellerID)
+
+			if repo.called != tt.expectedRepoCalled {
+				t.Fatalf("unexpected repository call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+			}
 
 			if tt.expectedErr != nil {
 				if !errors.Is(err, tt.expectedErr) {
@@ -130,7 +132,7 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 		expectedSeller          domain.Seller
 		expectedErr             error
 		expectedRepositoryInput domain.Seller
-		expectedCreateCalled    bool
+		expectedRepoCalled      bool
 	}{
 		{
 			name:        "success",
@@ -159,40 +161,40 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				Description: "cool brand",
 				Status:      domain.SellerStatusPending,
 			},
-			expectedCreateCalled: true,
+			expectedRepoCalled: true,
 		},
 		{
-			name:                 "empty user_id",
-			userID:               "",
-			expectedErr:          domain.ErrUserIDRequired,
-			expectedCreateCalled: false,
+			name:               "empty user_id",
+			userID:             "",
+			expectedErr:        domain.ErrUserIDRequired,
+			expectedRepoCalled: false,
 		},
 		{
-			name:                 "invalid user_id",
-			userID:               "invalid user_id",
-			expectedErr:          domain.ErrInvalidUserID,
-			expectedCreateCalled: false,
+			name:               "invalid user_id",
+			userID:             "invalid user_id",
+			expectedErr:        domain.ErrInvalidUserID,
+			expectedRepoCalled: false,
 		},
 		{
-			name:                 "empty brand_name",
-			userID:               "550e8400-e29b-41d4-a716-446655440000",
-			brandName:            "",
-			expectedErr:          domain.ErrBrandNameRequired,
-			expectedCreateCalled: false,
+			name:               "empty brand_name",
+			userID:             "550e8400-e29b-41d4-a716-446655440000",
+			brandName:          "",
+			expectedErr:        domain.ErrBrandNameRequired,
+			expectedRepoCalled: false,
 		},
 		{
-			name:                 "space brand_name",
-			userID:               "550e8400-e29b-41d4-a716-446655440000",
-			brandName:            "       	  ",
-			expectedErr:          domain.ErrBrandNameRequired,
-			expectedCreateCalled: false,
+			name:               "space brand_name",
+			userID:             "550e8400-e29b-41d4-a716-446655440000",
+			brandName:          "       	  ",
+			expectedErr:        domain.ErrBrandNameRequired,
+			expectedRepoCalled: false,
 		},
 		{
-			name:                 "too long brand_name",
-			userID:               "550e8400-e29b-41d4-a716-446655440000",
-			brandName:            strings.Repeat("a", 121),
-			expectedErr:          domain.ErrBrandNameTooLong,
-			expectedCreateCalled: false,
+			name:               "too long brand_name",
+			userID:             "550e8400-e29b-41d4-a716-446655440000",
+			brandName:          strings.Repeat("a", 121),
+			expectedErr:        domain.ErrBrandNameTooLong,
+			expectedRepoCalled: false,
 		},
 		{
 			name:        "brand_name_120_symbols_long",
@@ -221,7 +223,7 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				Description: "cool brand",
 				Status:      domain.SellerStatusPending,
 			},
-			expectedCreateCalled: true,
+			expectedRepoCalled: true,
 		},
 		{
 			name:        "repository returns brand already exists",
@@ -236,7 +238,7 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				Description: "cool brand",
 				Status:      domain.SellerStatusPending,
 			},
-			expectedCreateCalled: true,
+			expectedRepoCalled: true,
 		},
 		{
 			name:        "normalize check",
@@ -265,7 +267,7 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				Description: "cool brand",
 				Status:      domain.SellerStatusPending,
 			},
-			expectedCreateCalled: true,
+			expectedRepoCalled: true,
 		},
 	}
 
@@ -280,8 +282,8 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 
 			seller, err := uc.CreateSeller(context.Background(), tt.userID, tt.brandName, tt.description)
 
-			if repo.createCalled != tt.expectedCreateCalled {
-				t.Fatalf("unexpected repository call state: got %v, want %v", repo.createCalled, tt.expectedCreateCalled)
+			if repo.called != tt.expectedRepoCalled {
+				t.Fatalf("unexpected repository call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
 			}
 
 			if tt.expectedErr != nil {
@@ -319,7 +321,7 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				t.Fatalf("unexpected seller Status: got %v, want %v", seller.Status, tt.expectedSeller.Status)
 			}
 
-			if tt.expectedCreateCalled && repo.receivedSeller != tt.expectedRepositoryInput {
+			if tt.expectedRepoCalled && repo.receivedSeller != tt.expectedRepositoryInput {
 				t.Fatalf("unexpected seller RepositoryInput: got %v, want %v", repo.receivedSeller, tt.expectedRepositoryInput)
 			}
 		})
@@ -327,7 +329,85 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 }
 
 func TestSellerUseCase_GetSellerStatus(t *testing.T) {
+	var randomErr = errors.New("database unavailable")
 	tests := []struct {
+		name               string
+		sellerID           string
+		repositorySeller   domain.Seller
+		repositoryErr      error
+		expectedStatus     domain.SellerStatus
+		expectedErr        error
+		expectedRepoCalled bool
+	}{
+		{
+			name:     "success",
+			sellerID: "550e8400-e29b-41d4-a716-446655440000",
+			repositorySeller: domain.Seller{
+				ID:     uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+				Status: domain.SellerStatusActive,
+			},
+			repositoryErr:      nil,
+			expectedStatus:     domain.SellerStatusActive,
+			expectedErr:        nil,
+			expectedRepoCalled: true,
+		},
+		{
+			name:               "empty seller_id",
+			sellerID:           "",
+			expectedErr:        domain.ErrSellerIDRequired,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "invalid seller_id",
+			sellerID:           "invalid uuid",
+			expectedErr:        domain.ErrInvalidSellerID,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "seller not found",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440000",
+			repositoryErr:      domain.ErrSellerNotFound,
+			expectedErr:        domain.ErrSellerNotFound,
+			expectedRepoCalled: true,
+		},
+		{
+			name:               "random error",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440000",
+			repositoryErr:      randomErr,
+			expectedErr:        randomErr,
+			expectedRepoCalled: true,
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeSellerRepository{
+				seller: tt.repositorySeller,
+				err:    tt.repositoryErr,
+			}
+
+			uc := New(repo)
+
+			status, err := uc.GetSellerStatus(context.Background(), tt.sellerID)
+
+			if repo.called != tt.expectedRepoCalled {
+				t.Fatalf("unexpected repository call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+			}
+
+			if tt.expectedErr != nil {
+				if !errors.Is(err, tt.expectedErr) {
+					t.Fatalf("unexpected error: got %v, want %v", err, tt.expectedErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if status != tt.expectedStatus {
+				t.Fatalf("unexpected seller status: got %v, want %v", status, tt.expectedStatus)
+			}
+		})
 	}
 }
