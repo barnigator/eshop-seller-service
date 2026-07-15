@@ -11,9 +11,10 @@ import (
 )
 
 type fakeSellerRepository struct {
-	seller domain.Seller
-	called bool
-	err    error
+	sellers []domain.Seller
+	seller  domain.Seller
+	called  bool
+	err     error
 
 	receivedSeller domain.Seller
 	createResult   domain.Seller
@@ -29,6 +30,11 @@ func (f *fakeSellerRepository) CreateSeller(_ context.Context, seller domain.Sel
 	f.receivedSeller = seller
 	f.called = true
 	return f.createResult, f.createErr
+}
+
+func (f *fakeSellerRepository) ListSellersByUserID(_ context.Context, _ uuid.UUID) ([]domain.Seller, error) {
+	f.called = true
+	return f.sellers, f.err
 }
 
 func TestSellerUseCase_GetSeller(t *testing.T) {
@@ -286,6 +292,10 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				t.Fatalf("unexpected repository call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
 			}
 
+			if tt.expectedRepoCalled && repo.receivedSeller != tt.expectedRepositoryInput {
+				t.Fatalf("unexpected seller RepositoryInput: got %v, want %v", repo.receivedSeller, tt.expectedRepositoryInput)
+			}
+
 			if tt.expectedErr != nil {
 				if !errors.Is(err, tt.expectedErr) {
 					t.Fatalf("unexpected error: got %v, want %v", err, tt.expectedErr)
@@ -319,10 +329,6 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 
 			if seller.Status != tt.expectedSeller.Status {
 				t.Fatalf("unexpected seller Status: got %v, want %v", seller.Status, tt.expectedSeller.Status)
-			}
-
-			if tt.expectedRepoCalled && repo.receivedSeller != tt.expectedRepositoryInput {
-				t.Fatalf("unexpected seller RepositoryInput: got %v, want %v", repo.receivedSeller, tt.expectedRepositoryInput)
 			}
 		})
 	}
@@ -407,6 +413,149 @@ func TestSellerUseCase_GetSellerStatus(t *testing.T) {
 
 			if status != tt.expectedStatus {
 				t.Fatalf("unexpected seller status: got %v, want %v", status, tt.expectedStatus)
+			}
+		})
+	}
+}
+
+func TestSellerUseCase_ListSellersByUserID(t *testing.T) {
+	var randomErr = errors.New("database unavailable")
+
+	tests := []struct {
+		name               string
+		userID             string
+		repositorySellers  []domain.Seller
+		repositoryErr      error
+		expectedSellers    []domain.Seller
+		expectedErr        error
+		expectedRepoCalled bool
+	}{
+		{
+			name:   "success with few brands",
+			userID: "33311111-1111-1111-1111-111111111111",
+			repositorySellers: []domain.Seller{
+				{
+					ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+					UserID:      uuid.MustParse("33311111-1111-1111-1111-111111111111"),
+					BrandName:   "Adidas",
+					Description: "cool brand",
+					Status:      domain.SellerStatusActive,
+				},
+				{
+					ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
+					UserID:      uuid.MustParse("33311111-1111-1111-1111-111111111111"),
+					BrandName:   "Nike",
+					Description: "cool brand",
+					Status:      domain.SellerStatusActive,
+				},
+				{
+					ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440002"),
+					UserID:      uuid.MustParse("33311111-1111-1111-1111-111111111111"),
+					BrandName:   "Puma",
+					Description: "cool brand",
+					Status:      domain.SellerStatusActive,
+				},
+			},
+			repositoryErr: nil,
+			expectedSellers: []domain.Seller{
+				{
+					ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+					UserID:      uuid.MustParse("33311111-1111-1111-1111-111111111111"),
+					BrandName:   "Adidas",
+					Description: "cool brand",
+					Status:      domain.SellerStatusActive,
+				},
+				{
+					ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
+					UserID:      uuid.MustParse("33311111-1111-1111-1111-111111111111"),
+					BrandName:   "Nike",
+					Description: "cool brand",
+					Status:      domain.SellerStatusActive,
+				},
+				{
+					ID:          uuid.MustParse("550e8400-e29b-41d4-a716-446655440002"),
+					UserID:      uuid.MustParse("33311111-1111-1111-1111-111111111111"),
+					BrandName:   "Puma",
+					Description: "cool brand",
+					Status:      domain.SellerStatusActive,
+				},
+			},
+			expectedErr:        nil,
+			expectedRepoCalled: true,
+		},
+		{
+			name:               "success with empty list",
+			userID:             "44411111-1111-1111-1111-111111111111",
+			repositorySellers:  []domain.Seller{},
+			repositoryErr:      nil,
+			expectedSellers:    []domain.Seller{},
+			expectedErr:        nil,
+			expectedRepoCalled: true,
+		},
+		{
+			name:               "empty user_id",
+			userID:             "",
+			expectedErr:        domain.ErrUserIDRequired,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "invalid user_id",
+			userID:             "invalid user_id",
+			expectedErr:        domain.ErrInvalidUserID,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "random repository err",
+			userID:             "55511111-1111-1111-1111-111111111111",
+			repositoryErr:      randomErr,
+			expectedErr:        randomErr,
+			expectedRepoCalled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeSellerRepository{
+				sellers: tt.repositorySellers,
+				err:     tt.repositoryErr,
+			}
+
+			uc := New(repo)
+
+			sellers, err := uc.ListSellersByUserID(context.Background(), tt.userID)
+
+			if repo.called != tt.expectedRepoCalled {
+				t.Fatalf("unexpected repository call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+			}
+
+			if tt.expectedErr != nil {
+				if !errors.Is(err, tt.expectedErr) {
+					t.Fatalf("unexpected error: got %v, want %v", err, tt.expectedErr)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(sellers) != len(tt.expectedSellers) {
+				t.Fatalf("unexpected sellers amount: got %v, want %v", len(sellers), len(tt.expectedSellers))
+			}
+
+			for i := range tt.expectedSellers {
+				got := sellers[i]
+				want := tt.expectedSellers[i]
+
+				if got != want {
+					t.Fatalf(
+						"unexpected seller at index %d: got %+v, want %+v",
+						i,
+						got,
+						want,
+					)
+				}
 			}
 		})
 	}

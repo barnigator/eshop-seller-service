@@ -39,6 +39,18 @@ const (
 			description, 
 			status;
 `
+	listSellersByUserIDQuery = `
+		SELECT 
+			id,
+			user_id,
+			brand_name,
+			description, 
+			status
+		FROM sellers
+		WHERE user_id = $1
+			AND deleted_at IS NULL
+		ORDER BY created_at, id;
+`
 )
 
 type SellerRepository struct {
@@ -49,11 +61,11 @@ func New(pool *pgxpool.Pool) *SellerRepository {
 	return &SellerRepository{pool: pool}
 }
 
-func (s *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID) (domain.Seller, error) {
+func (r *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID) (domain.Seller, error) {
 	var seller domain.Seller
 	var status string
 
-	err := s.pool.QueryRow(
+	err := r.pool.QueryRow(
 		ctx,
 		getSellerByIDQuery,
 		sellerID,
@@ -79,7 +91,7 @@ func (s *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID
 	return seller, nil
 }
 
-func (s *SellerRepository) CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error) {
+func (r *SellerRepository) CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error) {
 	var createdSeller domain.Seller
 	var status string
 
@@ -88,7 +100,7 @@ func (s *SellerRepository) CreateSeller(ctx context.Context, seller domain.Selle
 		return domain.Seller{}, fmt.Errorf("convert seller status to string: %w", err)
 	}
 
-	err = s.pool.QueryRow(
+	err = r.pool.QueryRow(
 		ctx,
 		createSellerQuery,
 		seller.UserID,
@@ -121,4 +133,48 @@ func (s *SellerRepository) CreateSeller(ctx context.Context, seller domain.Selle
 	}
 
 	return createdSeller, nil
+}
+
+func (r *SellerRepository) ListSellersByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Seller, error) {
+	rows, err := r.pool.Query(
+		ctx,
+		listSellersByUserIDQuery,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list sellers by user id: %w", err)
+	}
+	defer rows.Close()
+
+	sellers := make([]domain.Seller, 0)
+
+	for rows.Next() {
+		var seller domain.Seller
+		var status string
+
+		err = rows.Scan(
+			&seller.ID,
+			&seller.UserID,
+			&seller.BrandName,
+			&seller.Description,
+			&status,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan seller row: %w", err)
+		}
+
+		seller.Status, err = convertStringToSellerStatus(status)
+		if err != nil {
+			return nil, fmt.Errorf("convert string to seller status: %w", err)
+		}
+
+		sellers = append(sellers, seller)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("iterate seller rows: %w", err)
+	}
+
+	return sellers, nil
 }

@@ -33,3 +33,12 @@ func convertSeller(seller domain.Seller) *sellerv1.Seller {
 		Status:      convertSellerStatus(seller.Status),
 	}
 }
+
+func convertSellers(sellers []domain.Seller) []*sellerv1.Seller {
+	sellersResult := make([]*sellerv1.Seller, len(sellers))
+	for i, seller := range sellers {
+		sellersResult[i] = convertSeller(seller)
+	}
+
+	return sellersResult
+}

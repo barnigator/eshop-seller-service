@@ -12,6 +12,7 @@ import (
 type SellerRepository interface {
 	GetSellerByID(ctx context.Context, sellerID uuid.UUID) (domain.Seller, error)
 	CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error)
+	ListSellersByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Seller, error)
 }
 
 type SellerUseCase struct {
@@ -93,4 +94,22 @@ func (uc *SellerUseCase) GetSeller(ctx context.Context, sellerID string) (domain
 	}
 
 	return seller, nil
+}
+
+func (uc *SellerUseCase) ListSellersByUserID(ctx context.Context, userID string) ([]domain.Seller, error) {
+	if userID == "" {
+		return nil, domain.ErrUserIDRequired
+	}
+
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, domain.ErrInvalidUserID
+	}
+
+	sellers, err := uc.repo.ListSellersByUserID(ctx, userUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	return sellers, nil
 }

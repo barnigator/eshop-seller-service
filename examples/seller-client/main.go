@@ -50,6 +50,12 @@ func main() {
 
 	//	тест 9. получаем продавца с помощью невалидного uuid
 	checkGetSeller(client, "invalid uuid")
+
+	// тест 10. получаем список продавцов по user_id
+	checkListSellersByUserID(client, "33311111-1111-1111-1111-111111111111")
+
+	// тест 11. получаем пустой список продавцов по user_id
+	checkListSellersByUserID(client, "44411111-1111-1111-1111-111111111111")
 }
 
 func fatal(format string, err error) {
@@ -110,4 +116,21 @@ func checkGetSeller(client sellerv1.SellerServiceClient, sellerID string) {
 	}
 
 	fmt.Println("seller:", resp.Seller)
+}
+
+func checkListSellersByUserID(client sellerv1.SellerServiceClient, userID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &sellerv1.ListSellersByUserIDRequest{
+		UserId: userID,
+	}
+
+	resp, err := client.ListSellersByUserID(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to list sellers: %v\n", err)
+		return
+	}
+
+	fmt.Println("sellers:", resp.Sellers)
 }
