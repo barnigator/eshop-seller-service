@@ -14,3 +14,14 @@ tasks:
     desc: Run client
     cmds:
       - go run ./examples/seller-client
+
+  test:
+    cmds:
+      - go test ./...
+
+  test-integration:
+    desc: Run integration tests
+    env:
+      POSTGRES_TEST_DSN: postgres://eshop_seller:eshop_seller@localhost:5432/eshop_seller_test?sslmode=disable
+    cmds:
+      - go test -tags=integration -v ./internal/repository/postgres
