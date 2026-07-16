@@ -211,12 +211,191 @@ func TestSellerRepository_ListSellersByUserID_Empty(t *testing.T) {
 	}
 }
 
-func truncateSellers(t *testing.T, pool *pgxpool.Pool) {
-	t.Helper()
+func TestSellerRepository_UpdateSeller(t *testing.T) {
+	repo := newRepo(t)
 
-	_, err := pool.Exec(context.Background(), "TRUNCATE TABLE sellers")
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Integration Test Brand",
+		Description: "integration test seller",
+		Status:      domain.SellerStatusPending,
+	}
+
+	sellerCreated, err := repo.CreateSeller(context.Background(), seller)
 	if err != nil {
-		t.Fatalf("truncate sellers table: %v", err)
+		t.Fatalf("create seller: %v", err)
+	}
+
+	brandName := "Adidas"
+	description := "New description"
+
+	sellerUpdated, err := repo.UpdateSeller(context.Background(), sellerCreated.ID, &brandName, &description)
+	if err != nil {
+		t.Fatalf("update seller: %v", err)
+	}
+
+	if sellerUpdated.BrandName != brandName {
+		t.Fatalf("unexpected brand name: got %v, want %v", sellerUpdated.BrandName, brandName)
+	}
+
+	if sellerUpdated.Description != description {
+		t.Fatalf("unexpected description: got %v, want %v", sellerUpdated.Description, description)
+	}
+
+	sellerGot, err := repo.GetSellerByID(context.Background(), sellerCreated.ID)
+	if err != nil {
+		t.Fatalf("get seller: %v", err)
+	}
+
+	if sellerGot.BrandName != brandName {
+		t.Fatalf("unexpected brand name: got %v, want %v", sellerGot.BrandName, brandName)
+	}
+
+	if sellerGot.Description != description {
+		t.Fatalf("unexpected description: got %v, want %v", sellerGot.Description, description)
+	}
+}
+
+func TestSellerRepository_UpdateSeller_BrandName(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Integration Test Brand",
+		Description: "integration test seller",
+		Status:      domain.SellerStatusPending,
+	}
+
+	sellerCreated, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	brandName := "New name"
+	var description *string
+
+	sellerUpdated, err := repo.UpdateSeller(context.Background(), sellerCreated.ID, &brandName, description)
+	if err != nil {
+		t.Fatalf("update seller: %v", err)
+	}
+
+	if sellerUpdated.BrandName != brandName {
+		t.Fatalf("unexpected brand name: got %v, want %v", sellerUpdated.BrandName, brandName)
+	}
+
+	if sellerUpdated.Description != sellerCreated.Description {
+		t.Fatalf("unexpected description: got %v, want %v", sellerUpdated.Description, sellerCreated.Description)
+	}
+}
+
+func TestSellerRepository_UpdateSeller_Description(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Integration Test Brand",
+		Description: "integration test seller",
+		Status:      domain.SellerStatusPending,
+	}
+
+	sellerCreated, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	var brandName *string
+	description := "New description"
+
+	sellerUpdated, err := repo.UpdateSeller(context.Background(), sellerCreated.ID, brandName, &description)
+	if err != nil {
+		t.Fatalf("update seller: %v", err)
+	}
+
+	if sellerUpdated.BrandName != sellerCreated.BrandName {
+		t.Fatalf("unexpected brand name: got %v, want %v", sellerUpdated.BrandName, sellerCreated.BrandName)
+	}
+
+	if sellerUpdated.Description != description {
+		t.Fatalf("unexpected description: got %v, want %v", sellerUpdated.Description, description)
+	}
+}
+
+func TestSellerRepository_UpdateSeller_ClearDescription(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Integration Test Brand",
+		Description: "integration test seller",
+		Status:      domain.SellerStatusPending,
+	}
+
+	sellerCreated, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	var brandName *string
+	description := ""
+
+	sellerUpdated, err := repo.UpdateSeller(context.Background(), sellerCreated.ID, brandName, &description)
+	if err != nil {
+		t.Fatalf("update seller: %v", err)
+	}
+
+	if sellerUpdated.BrandName != sellerCreated.BrandName {
+		t.Fatalf("unexpected brand name: got %v, want %v", sellerUpdated.BrandName, sellerCreated.BrandName)
+	}
+
+	if sellerUpdated.Description != description {
+		t.Fatalf("unexpected description: got %v, want %v", sellerUpdated.Description, description)
+	}
+}
+
+func TestSellerRepository_UpdateSeller_NotFound(t *testing.T) {
+	repo := newRepo(t)
+
+	brandName := "test brand"
+	description := "test description"
+
+	_, err := repo.UpdateSeller(context.Background(), uuid.New(), &brandName, &description)
+	if !errors.Is(err, domain.ErrSellerNotFound) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrSellerNotFound)
+	}
+}
+
+func TestSellerRepository_UpdateSeller_BrandAlreadyExists(t *testing.T) {
+	repo := newRepo(t)
+
+	userUUID := uuid.New()
+
+	seller1 := domain.Seller{
+		UserID:      userUUID,
+		BrandName:   "Adidas",
+		Description: "integration test seller1",
+		Status:      domain.SellerStatusPending,
+	}
+
+	seller2 := domain.Seller{
+		UserID:      userUUID,
+		BrandName:   "Puma",
+		Description: "integration test seller2",
+		Status:      domain.SellerStatusPending,
+	}
+
+	seller1Created, err := repo.CreateSeller(context.Background(), seller1)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	seller2Created, err := repo.CreateSeller(context.Background(), seller2)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	_, err = repo.UpdateSeller(context.Background(), seller2Created.ID, &seller1Created.BrandName, nil)
+	if !errors.Is(err, domain.ErrBrandAlreadyExists) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrBrandAlreadyExists)
 	}
 }
 
@@ -237,4 +416,13 @@ func newRepo(t *testing.T) *SellerRepository {
 	truncateSellers(t, pool)
 
 	return New(pool)
+}
+
+func truncateSellers(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+
+	_, err := pool.Exec(context.Background(), "TRUNCATE TABLE sellers")
+	if err != nil {
+		t.Fatalf("truncate sellers table: %v", err)
+	}
 }

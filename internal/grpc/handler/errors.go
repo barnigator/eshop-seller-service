@@ -8,6 +8,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func invalidArgument(message string) error {
+	return status.Error(codes.InvalidArgument, message)
+}
+
 func convertError(err error) error {
 	switch {
 	case errors.Is(err, domain.ErrSellerIDRequired):
@@ -26,6 +30,8 @@ func convertError(err error) error {
 		return status.Error(codes.AlreadyExists, domain.ErrBrandAlreadyExists.Error())
 	case errors.Is(err, domain.ErrSellerNotFound):
 		return status.Error(codes.NotFound, domain.ErrSellerNotFound.Error())
+	case errors.Is(err, domain.ErrNoFieldsToUpdate):
+		return status.Error(codes.InvalidArgument, domain.ErrNoFieldsToUpdate.Error())
 	default:
 		return status.Error(codes.Internal, "internal error")
 	}

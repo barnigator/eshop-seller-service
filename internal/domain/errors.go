@@ -13,4 +13,6 @@ var (
 	ErrBrandNameRequired  = errors.New("brand_name is required")
 	ErrBrandNameTooLong   = errors.New("brand_name exceeds 120 characters")
 	ErrBrandAlreadyExists = errors.New("brand already exists")
+
+	ErrNoFieldsToUpdate = errors.New("no fields to update")
 )

@@ -51,6 +51,21 @@ const (
 			AND deleted_at IS NULL
 		ORDER BY created_at, id;
 `
+	updateSellerQuery = `
+		UPDATE sellers
+		SET
+			brand_name = COALESCE($2, brand_name),
+			description = COALESCE($3, description),
+			updated_at = now()
+		WHERE id = $1
+		  AND deleted_at IS NULL
+		RETURNING
+			id,
+			user_id,
+			brand_name,
+			description,
+			status
+`
 )
 
 type SellerRepository struct {
@@ -177,4 +192,45 @@ func (r *SellerRepository) ListSellersByUserID(ctx context.Context, userID uuid.
 	}
 
 	return sellers, nil
+}
+
+func (r *SellerRepository) UpdateSeller(ctx context.Context, sellerID uuid.UUID, brandName *string, description *string) (domain.Seller, error) {
+	var seller domain.Seller
+	var status string
+
+	err := r.pool.QueryRow(
+		ctx,
+		updateSellerQuery,
+		sellerID,
+		brandName,
+		description,
+	).Scan(
+		&seller.ID,
+		&seller.UserID,
+		&seller.BrandName,
+		&seller.Description,
+		&status,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Seller{}, domain.ErrSellerNotFound
+		}
+
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) &&
+			pgErr.Code == "23505" &&
+			pgErr.ConstraintName == "ux_sellers_user_brand_name_active" {
+			return domain.Seller{}, domain.ErrBrandAlreadyExists
+		}
+
+		return domain.Seller{}, fmt.Errorf("update seller: %w", err)
+	}
+
+	seller.Status, err = convertStringToSellerStatus(status)
+	if err != nil {
+		return domain.Seller{}, fmt.Errorf("convert string to seller status: %w", err)
+	}
+
+	return seller, nil
 }

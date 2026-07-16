@@ -16,25 +16,40 @@ type fakeSellerRepository struct {
 	called  bool
 	err     error
 
-	receivedSeller domain.Seller
-	createResult   domain.Seller
-	createErr      error
+	receivedSellerID    uuid.UUID
+	receivedSeller      domain.Seller
+	receivedBrandName   *string
+	receivedDescription *string
 }
 
-func (f *fakeSellerRepository) GetSellerByID(_ context.Context, _ uuid.UUID) (domain.Seller, error) {
+func (f *fakeSellerRepository) GetSellerByID(_ context.Context, sellerID uuid.UUID) (domain.Seller, error) {
 	f.called = true
+	f.receivedSellerID = sellerID
+
 	return f.seller, f.err
 }
 
 func (f *fakeSellerRepository) CreateSeller(_ context.Context, seller domain.Seller) (domain.Seller, error) {
 	f.receivedSeller = seller
 	f.called = true
-	return f.createResult, f.createErr
+
+	return f.seller, f.err
 }
 
-func (f *fakeSellerRepository) ListSellersByUserID(_ context.Context, _ uuid.UUID) ([]domain.Seller, error) {
+func (f *fakeSellerRepository) ListSellersByUserID(_ context.Context, sellerID uuid.UUID) ([]domain.Seller, error) {
+	f.receivedSellerID = sellerID
 	f.called = true
+
 	return f.sellers, f.err
+}
+
+func (f *fakeSellerRepository) UpdateSeller(_ context.Context, sellerID uuid.UUID, brandName *string, description *string) (domain.Seller, error) {
+	f.receivedSellerID = sellerID
+	f.receivedBrandName = brandName
+	f.receivedDescription = description
+	f.called = true
+
+	return f.seller, f.err
 }
 
 func TestSellerUseCase_GetSeller(t *testing.T) {
@@ -280,8 +295,8 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &fakeSellerRepository{
-				createResult: tt.createResult,
-				createErr:    tt.createErr,
+				seller: tt.createResult,
+				err:    tt.createErr,
 			}
 
 			uc := New(repo)
@@ -559,4 +574,133 @@ func TestSellerUseCase_ListSellersByUserID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSellerUseCase_UpdateSeller(t *testing.T) {
+	tests := []struct {
+		name                string
+		sellerID            string
+		brandName           *string
+		description         *string
+		expectedBrandName   *string
+		expectedDescription *string
+		expectedErr         error
+		expectedRepoCalled  bool
+	}{
+		{
+			name:               "success brand",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440002",
+			brandName:          strPtr("Adidas"),
+			expectedBrandName:  strPtr("Adidas"),
+			expectedRepoCalled: true,
+		},
+		{
+			name:                "success description",
+			sellerID:            "550e8400-e29b-41d4-a716-446655440002",
+			description:         strPtr("New description"),
+			expectedDescription: strPtr("New description"),
+			expectedRepoCalled:  true,
+		},
+		{
+			name:                "success both",
+			sellerID:            "550e8400-e29b-41d4-a716-446655440002",
+			brandName:           strPtr("Adidas"),
+			description:         strPtr("New description"),
+			expectedBrandName:   strPtr("Adidas"),
+			expectedDescription: strPtr("New description"),
+			expectedRepoCalled:  true,
+		},
+		{
+			name:               "empty seller id",
+			sellerID:           "",
+			expectedErr:        domain.ErrSellerIDRequired,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "invalid seller id",
+			sellerID:           "invalid uuid",
+			expectedErr:        domain.ErrInvalidSellerID,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "nil fields",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440002",
+			expectedErr:        domain.ErrNoFieldsToUpdate,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "brand empty",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440002",
+			brandName:          strPtr(""),
+			expectedErr:        domain.ErrBrandNameRequired,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "brand too long",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440002",
+			brandName:          strPtr(strings.Repeat("a", 121)),
+			expectedErr:        domain.ErrBrandNameTooLong,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "brand space",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440002",
+			brandName:          strPtr("  	"),
+			expectedErr:        domain.ErrBrandNameRequired,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "normalize brand",
+			sellerID:           "550e8400-e29b-41d4-a716-446655440002",
+			brandName:          strPtr("  Adidas	 	"),
+			expectedBrandName:  strPtr("Adidas"),
+			expectedRepoCalled: true,
+		},
+		{
+			name:                "normalize description",
+			sellerID:            "550e8400-e29b-41d4-a716-446655440002",
+			description:         strPtr(" 	 New description	  "),
+			expectedDescription: strPtr("New description"),
+			expectedRepoCalled:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeSellerRepository{}
+
+			uc := New(repo)
+
+			_, err := uc.UpdateSeller(context.Background(), tt.sellerID, tt.brandName, tt.description)
+
+			if repo.called != tt.expectedRepoCalled {
+				t.Fatalf("unexpected repository call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+			}
+
+			if tt.expectedErr != nil {
+				if !errors.Is(err, tt.expectedErr) {
+					t.Fatalf("unexpected error: got %v, want %v", err, tt.expectedErr)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tt.expectedBrandName != nil && *repo.receivedBrandName != *tt.expectedBrandName {
+				t.Fatalf("unexpected brand name: got %v, want %v", repo.receivedBrandName, tt.expectedBrandName)
+			}
+
+			if tt.expectedDescription != nil && *repo.receivedDescription != *tt.expectedDescription {
+				t.Fatalf("unexpected description: got %v, want %v", repo.receivedDescription, tt.expectedDescription)
+			}
+
+		})
+	}
+}
+
+func strPtr(s string) *string {
+	return &s
 }

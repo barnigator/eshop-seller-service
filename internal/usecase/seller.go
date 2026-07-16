@@ -13,6 +13,7 @@ type SellerRepository interface {
 	GetSellerByID(ctx context.Context, sellerID uuid.UUID) (domain.Seller, error)
 	CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error)
 	ListSellersByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Seller, error)
+	UpdateSeller(ctx context.Context, sellerID uuid.UUID, brandName *string, description *string) (domain.Seller, error)
 }
 
 type SellerUseCase struct {
@@ -112,4 +113,45 @@ func (uc *SellerUseCase) ListSellersByUserID(ctx context.Context, userID string)
 	}
 
 	return sellers, nil
+}
+
+func (uc *SellerUseCase) UpdateSeller(ctx context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error) {
+	if sellerID == "" {
+		return domain.Seller{}, domain.ErrSellerIDRequired
+	}
+
+	sellerUUID, err := uuid.Parse(sellerID)
+	if err != nil {
+		return domain.Seller{}, domain.ErrInvalidSellerID
+	}
+
+	if brandName == nil && description == nil {
+		return domain.Seller{}, domain.ErrNoFieldsToUpdate
+	}
+
+	if brandName != nil {
+		cleanBrandName := strings.TrimSpace(*brandName)
+		if cleanBrandName == "" {
+			return domain.Seller{}, domain.ErrBrandNameRequired
+		}
+
+		if utf8.RuneCountInString(cleanBrandName) > 120 {
+			return domain.Seller{}, domain.ErrBrandNameTooLong
+		}
+
+		brandName = &cleanBrandName
+	}
+
+	if description != nil {
+		cleanDescription := strings.TrimSpace(*description)
+
+		description = &cleanDescription
+	}
+
+	seller, err := uc.repo.UpdateSeller(ctx, sellerUUID, brandName, description)
+	if err != nil {
+		return domain.Seller{}, err
+	}
+
+	return seller, nil
 }

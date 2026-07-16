@@ -6,8 +6,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	sellerv1 "github.com/barnigator/protos/gen/go/seller/v1"
 )
@@ -56,6 +58,62 @@ func main() {
 
 	// тест 11. получаем пустой список продавцов по user_id
 	checkListSellersByUserID(client, "44411111-1111-1111-1111-111111111111")
+
+	checkUpdateSeller(
+		client,
+		"550e8400-e29b-41d4-a716-446655440000",
+		"New Brand",
+		"",
+		[]string{"brand_name"},
+	)
+
+	checkUpdateSeller(
+		client,
+		"550e8400-e29b-41d4-a716-446655440000",
+		"",
+		"New description",
+		[]string{"description"},
+	)
+
+	checkUpdateSeller(
+		client,
+		"550e8400-e29b-41d4-a716-446655440000",
+		"Another Brand",
+		"Another description",
+		[]string{"brand_name", "description"},
+	)
+
+	checkUpdateSeller(
+		client,
+		"550e8400-e29b-41d4-a716-446655440000",
+		"",
+		"",
+		[]string{"description"},
+	)
+
+	checkUpdateSeller(
+		client,
+		"550e8400-e29b-41d4-a716-446655440000",
+		"",
+		"",
+		[]string{},
+	)
+
+	checkUpdateSeller(
+		client,
+		"550e8400-e29b-41d4-a716-446655440000",
+		"",
+		"",
+		[]string{"status"},
+	)
+
+	checkUpdateSeller(
+		client,
+		uuid.NewString(),
+		"New Brand",
+		"",
+		[]string{"brand_name"},
+	)
 }
 
 func fatal(format string, err error) {
@@ -133,4 +191,26 @@ func checkListSellersByUserID(client sellerv1.SellerServiceClient, userID string
 	}
 
 	fmt.Println("sellers:", resp.Sellers)
+}
+
+func checkUpdateSeller(client sellerv1.SellerServiceClient, sellerID string, brandName string, description string, paths []string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &sellerv1.UpdateSellerRequest{
+		SellerId:    sellerID,
+		BrandName:   brandName,
+		Description: description,
+		UpdateMask: &fieldmaskpb.FieldMask{
+			Paths: paths,
+		},
+	}
+
+	resp, err := client.UpdateSeller(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to update seller: %v\n", err)
+		return
+	}
+
+	fmt.Println("seller:", resp.Seller)
 }

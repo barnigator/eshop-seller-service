@@ -19,6 +19,10 @@ tasks:
     cmds:
       - go test ./...
 
+  test-usecase:
+    cmds:
+      - go test -v ./internal/usecase
+
   test-integration:
     desc: Run integration tests
     env:

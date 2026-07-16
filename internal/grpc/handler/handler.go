@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/barnigator/eshop-seller-service/internal/domain"
 	sellerv1 "github.com/barnigator/protos/gen/go/seller/v1"
@@ -12,6 +13,7 @@ type SellerUseCase interface {
 	CreateSeller(ctx context.Context, userID string, brandName string, description string) (domain.Seller, error)
 	GetSeller(ctx context.Context, sellerID string) (domain.Seller, error)
 	ListSellersByUserID(ctx context.Context, userID string) ([]domain.Seller, error)
+	UpdateSeller(ctx context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error)
 }
 
 type Handler struct {
@@ -62,5 +64,39 @@ func (h *Handler) ListSellersByUserID(ctx context.Context, req *sellerv1.ListSel
 
 	return &sellerv1.ListSellersResponse{
 		Sellers: convertSellers(sellers),
+	}, nil
+}
+
+func (h *Handler) UpdateSeller(ctx context.Context, req *sellerv1.UpdateSellerRequest) (*sellerv1.SellerResponse, error) {
+	if req.UpdateMask == nil {
+		return nil, invalidArgument("update_mask is required")
+	}
+
+	if len(req.UpdateMask.Paths) == 0 {
+		return nil, invalidArgument("update_mask.paths must not be empty")
+	}
+
+	var brandName, description *string
+
+	for _, path := range req.UpdateMask.Paths {
+		switch path {
+		case "brand_name":
+			brandName = &req.BrandName
+		case "description":
+			description = &req.Description
+		default:
+			return nil, invalidArgument(
+				fmt.Sprintf("unsupported update field: %s", path),
+			)
+		}
+	}
+
+	seller, err := h.uc.UpdateSeller(ctx, req.SellerId, brandName, description)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &sellerv1.SellerResponse{
+		Seller: convertSeller(seller),
 	}, nil
 }
