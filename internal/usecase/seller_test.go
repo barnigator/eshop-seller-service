@@ -52,6 +52,13 @@ func (f *fakeSellerRepository) UpdateSeller(_ context.Context, sellerID uuid.UUI
 	return f.seller, f.err
 }
 
+func (f *fakeSellerRepository) ArchiveSeller(_ context.Context, sellerID uuid.UUID) error {
+	f.receivedSellerID = sellerID
+	f.called = true
+
+	return f.err
+}
+
 func TestSellerUseCase_GetSeller(t *testing.T) {
 	tests := []struct {
 		name               string
@@ -697,6 +704,85 @@ func TestSellerUseCase_UpdateSeller(t *testing.T) {
 				t.Fatalf("unexpected description: got %v, want %v", repo.receivedDescription, tt.expectedDescription)
 			}
 
+		})
+	}
+}
+
+func TestSellerUseCase_ArchiveSeller(t *testing.T) {
+	sellerUUID := uuid.New()
+	randomErr := errors.New("database error")
+	tests := []struct {
+		name               string
+		sellerID           string
+		repositoryErr      error
+		expectedUUID       uuid.UUID
+		expectedErr        error
+		expectedRepoCalled bool
+	}{
+		{
+			name:               "success",
+			sellerID:           sellerUUID.String(),
+			expectedUUID:       sellerUUID,
+			expectedRepoCalled: true,
+		},
+		{
+			name:               "empty seller_id",
+			sellerID:           "",
+			expectedErr:        domain.ErrSellerIDRequired,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "invalid uuid",
+			sellerID:           "invalid uuid",
+			expectedErr:        domain.ErrInvalidSellerID,
+			expectedRepoCalled: false,
+		},
+		{
+			name:               "seller not found",
+			sellerID:           sellerUUID.String(),
+			repositoryErr:      domain.ErrSellerNotFound,
+			expectedErr:        domain.ErrSellerNotFound,
+			expectedRepoCalled: true,
+		},
+		{
+			name:               "random error",
+			sellerID:           sellerUUID.String(),
+			repositoryErr:      randomErr,
+			expectedErr:        randomErr,
+			expectedRepoCalled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeSellerRepository{
+				err: tt.repositoryErr,
+			}
+
+			uc := New(repo)
+
+			err := uc.ArchiveSeller(context.Background(), tt.sellerID)
+
+			if repo.called != tt.expectedRepoCalled {
+				t.Fatalf("unexpected repo call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+			}
+
+			if tt.expectedErr != nil {
+				if !errors.Is(err, tt.expectedErr) {
+					t.Fatalf("unexpected error: got %v, want %v", err, tt.expectedErr)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+
+			}
+
+			if repo.receivedSellerID != tt.expectedUUID {
+				t.Fatalf("unexpected seller id: got %v, want %v", repo.receivedSellerID, tt.expectedUUID)
+			}
 		})
 	}
 }

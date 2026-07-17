@@ -21,7 +21,7 @@ type fakeSellerUsecase struct {
 	receivedDescription *string
 }
 
-func (f *fakeSellerUsecase) GetSellerStatus(ctx context.Context, sellerID string) (domain.SellerStatus, error) {
+func (f *fakeSellerUsecase) GetSellerStatus(_ context.Context, _ string) (domain.SellerStatus, error) {
 	return f.seller.Status, f.err
 }
 
@@ -37,12 +37,18 @@ func (f *fakeSellerUsecase) ListSellersByUserID(_ context.Context, _ string) ([]
 	return f.sellers, f.err
 }
 
-func (f *fakeSellerUsecase) UpdateSeller(_ context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error) {
+func (f *fakeSellerUsecase) UpdateSeller(_ context.Context, _ string, brandName *string, description *string) (domain.Seller, error) {
 	f.called = true
 	f.receivedBrandName = brandName
 	f.receivedDescription = description
 
 	return f.seller, f.err
+}
+
+func (f *fakeSellerUsecase) ArchiveSeller(_ context.Context, _ string) error {
+	f.called = true
+
+	return f.err
 }
 
 func TestHandler_UpdateSeller(t *testing.T) {

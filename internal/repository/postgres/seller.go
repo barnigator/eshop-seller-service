@@ -66,6 +66,27 @@ const (
 			description,
 			status
 `
+	archiveSellerQuery = `
+		WITH 
+		existing_seller AS (
+			SELECT status
+			FROM sellers
+			WHERE id = $1
+			  AND deleted_at IS NULL
+		),
+		updated_seller AS (
+			UPDATE sellers
+			SET
+				status = 'archived',
+				updated_at = now()
+			WHERE id = $1
+			  AND deleted_at IS NULL
+			  AND status <> 'archived'
+			RETURNING id
+		)
+		SELECT 
+			EXISTS (SELECT 1 FROM existing_seller);
+`
 )
 
 type SellerRepository struct {
@@ -233,4 +254,23 @@ func (r *SellerRepository) UpdateSeller(ctx context.Context, sellerID uuid.UUID,
 	}
 
 	return seller, nil
+}
+
+func (r *SellerRepository) ArchiveSeller(ctx context.Context, sellerID uuid.UUID) error {
+	var exists bool
+
+	err := r.pool.QueryRow(
+		ctx,
+		archiveSellerQuery,
+		sellerID,
+	).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("archive seller: %w", err)
+	}
+
+	if !exists {
+		return domain.ErrSellerNotFound
+	}
+
+	return nil
 }

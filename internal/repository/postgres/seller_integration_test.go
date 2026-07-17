@@ -399,6 +399,80 @@ func TestSellerRepository_UpdateSeller_BrandAlreadyExists(t *testing.T) {
 	}
 }
 
+func TestSellerRepository_ArchiveSeller(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Adidas",
+		Description: "cool brand",
+		Status:      domain.SellerStatusPending,
+	}
+
+	sellerCreated, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	err = repo.ArchiveSeller(context.Background(), sellerCreated.ID)
+	if err != nil {
+		t.Fatalf("archive seller: %v", err)
+	}
+
+	archivedSeller, err := repo.GetSellerByID(context.Background(), sellerCreated.ID)
+	if err != nil {
+		t.Fatalf("get seller by id: %v", err)
+	}
+
+	if archivedSeller.Status != domain.SellerStatusArchived {
+		t.Fatalf("unexpected seller status: got %v, want %v", archivedSeller.Status, domain.SellerStatusArchived)
+	}
+}
+
+func TestSellerRepository_ArchiveSeller_Double(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Adidas",
+		Description: "cool brand",
+		Status:      domain.SellerStatusPending,
+	}
+
+	sellerCreated, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	err = repo.ArchiveSeller(context.Background(), sellerCreated.ID)
+	if err != nil {
+		t.Fatalf("first attempt archive seller: %v", err)
+	}
+
+	err = repo.ArchiveSeller(context.Background(), sellerCreated.ID)
+	if err != nil {
+		t.Fatalf("second attempt archive seller: %v", err)
+	}
+
+	archivedSeller, err := repo.GetSellerByID(context.Background(), sellerCreated.ID)
+	if err != nil {
+		t.Fatalf("get seller by id: %v", err)
+	}
+
+	if archivedSeller.Status != domain.SellerStatusArchived {
+		t.Fatalf("unexpected seller status: got %v, want %v", archivedSeller.Status, domain.SellerStatusArchived)
+	}
+}
+
+func TestSellerRepository_ArchiveSeller_NotFound(t *testing.T) {
+	repo := newRepo(t)
+
+	err := repo.ArchiveSeller(context.Background(), uuid.New())
+	if !errors.Is(err, domain.ErrSellerNotFound) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrSellerNotFound)
+	}
+}
+
 func newRepo(t *testing.T) *SellerRepository {
 	t.Helper()
 

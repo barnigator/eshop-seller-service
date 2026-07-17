@@ -27,13 +27,13 @@ func main() {
 	client := sellerv1.NewSellerServiceClient(cc)
 
 	// тест 1. валидный uuid, продавец есть
-	checkSellerStatus(client, "550e8400-e29b-41d4-a716-446655440000")
+	checkGetSellerStatus(client, "550e8400-e29b-41d4-a716-446655440000")
 
 	// тест 2. валидный uuid, продавца нет
-	checkSellerStatus(client, "550e8400-e29b-41d4-a716-446655441111")
+	checkGetSellerStatus(client, "550e8400-e29b-41d4-a716-446655441111")
 
 	//	тест 3. невалидный uuid
-	checkSellerStatus(client, "invalid uuid")
+	checkGetSellerStatus(client, "invalid uuid")
 
 	//	тест 4. создаем продавца
 	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "Nike", "  cool  ")
@@ -59,11 +59,7 @@ func main() {
 	// тест 11. получаем пустой список продавцов по user_id
 	checkListSellersByUserID(client, "44411111-1111-1111-1111-111111111111")
 
-	checkUpdateSeller(
-		client,
-		"550e8400-e29b-41d4-a716-446655440000",
-		"New Brand",
-		"",
+	checkUpdateSeller(client, "550e8400-e29b-41d4-a716-446655440000", "New Brand", "",
 		[]string{"brand_name"},
 	)
 
@@ -114,6 +110,20 @@ func main() {
 		"",
 		[]string{"brand_name"},
 	)
+
+	sellerId := "550e8400-e29b-41d4-a716-446655440000"
+
+	checkArchiveSeller(client, sellerId)
+
+	checkGetSellerStatus(client, sellerId)
+
+	checkArchiveSeller(client, sellerId)
+
+	checkGetSellerStatus(client, sellerId)
+
+	checkArchiveSeller(client, uuid.NewString())
+
+	checkArchiveSeller(client, "")
 }
 
 func fatal(format string, err error) {
@@ -121,7 +131,7 @@ func fatal(format string, err error) {
 	os.Exit(1)
 }
 
-func checkSellerStatus(client sellerv1.SellerServiceClient, sellerID string) {
+func checkGetSellerStatus(client sellerv1.SellerServiceClient, sellerID string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -213,4 +223,26 @@ func checkUpdateSeller(client sellerv1.SellerServiceClient, sellerID string, bra
 	}
 
 	fmt.Println("seller:", resp.Seller)
+}
+
+func checkArchiveSeller(client sellerv1.SellerServiceClient, sellerID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := &sellerv1.ArchiveSellerRequest{
+		SellerId: sellerID,
+	}
+
+	empty, err := client.ArchiveSeller(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to archive seller: %v\n", err)
+		return
+	}
+
+	if empty == nil {
+		fmt.Println("unexpected nil response")
+		return
+	}
+
+	fmt.Println("seller archived successfully")
 }

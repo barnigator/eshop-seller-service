@@ -6,6 +6,7 @@ import (
 
 	"github.com/barnigator/eshop-seller-service/internal/domain"
 	sellerv1 "github.com/barnigator/protos/gen/go/seller/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type SellerUseCase interface {
@@ -14,6 +15,7 @@ type SellerUseCase interface {
 	GetSeller(ctx context.Context, sellerID string) (domain.Seller, error)
 	ListSellersByUserID(ctx context.Context, userID string) ([]domain.Seller, error)
 	UpdateSeller(ctx context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error)
+	ArchiveSeller(ctx context.Context, sellerID string) error
 }
 
 type Handler struct {
@@ -99,4 +101,13 @@ func (h *Handler) UpdateSeller(ctx context.Context, req *sellerv1.UpdateSellerRe
 	return &sellerv1.SellerResponse{
 		Seller: convertSeller(seller),
 	}, nil
+}
+
+func (h *Handler) ArchiveSeller(ctx context.Context, req *sellerv1.ArchiveSellerRequest) (*emptypb.Empty, error) {
+	err := h.uc.ArchiveSeller(ctx, req.SellerId)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &emptypb.Empty{}, nil
 }
