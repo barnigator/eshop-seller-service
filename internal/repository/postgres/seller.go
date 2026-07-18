@@ -87,6 +87,14 @@ const (
 		SELECT 
 			EXISTS (SELECT 1 FROM existing_seller);
 `
+	deleteSellerQuery = `
+		UPDATE sellers
+		SET
+		    deleted_at = now()
+		WHERE
+		    id = $1
+			AND deleted_at IS NULL;
+`
 )
 
 type SellerRepository struct {
@@ -269,6 +277,19 @@ func (r *SellerRepository) ArchiveSeller(ctx context.Context, sellerID uuid.UUID
 	}
 
 	if !exists {
+		return domain.ErrSellerNotFound
+	}
+
+	return nil
+}
+
+func (r *SellerRepository) DeleteSeller(ctx context.Context, sellerID uuid.UUID) error {
+	tag, err := r.pool.Exec(ctx, deleteSellerQuery, sellerID)
+	if err != nil {
+		return fmt.Errorf("delete seller: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
 		return domain.ErrSellerNotFound
 	}
 

@@ -16,6 +16,7 @@ type SellerUseCase interface {
 	ListSellersByUserID(ctx context.Context, userID string) ([]domain.Seller, error)
 	UpdateSeller(ctx context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error)
 	ArchiveSeller(ctx context.Context, sellerID string) error
+	DeleteSeller(ctx context.Context, sellerID string) error
 }
 
 type Handler struct {
@@ -105,6 +106,15 @@ func (h *Handler) UpdateSeller(ctx context.Context, req *sellerv1.UpdateSellerRe
 
 func (h *Handler) ArchiveSeller(ctx context.Context, req *sellerv1.ArchiveSellerRequest) (*emptypb.Empty, error) {
 	err := h.uc.ArchiveSeller(ctx, req.SellerId)
+	if err != nil {
+		return nil, convertError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) DeleteSeller(ctx context.Context, req *sellerv1.DeleteSellerRequest) (*emptypb.Empty, error) {
+	err := h.uc.DeleteSeller(ctx, req.SellerId)
 	if err != nil {
 		return nil, convertError(err)
 	}

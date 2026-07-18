@@ -15,6 +15,7 @@ type SellerRepository interface {
 	ListSellersByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Seller, error)
 	UpdateSeller(ctx context.Context, sellerID uuid.UUID, brandName *string, description *string) (domain.Seller, error)
 	ArchiveSeller(ctx context.Context, sellerID uuid.UUID) error
+	DeleteSeller(ctx context.Context, sellerID uuid.UUID) error
 }
 
 type SellerUseCase struct {
@@ -168,4 +169,17 @@ func (uc *SellerUseCase) ArchiveSeller(ctx context.Context, sellerID string) err
 	}
 
 	return uc.repo.ArchiveSeller(ctx, sellerUUID)
+}
+
+func (uc *SellerUseCase) DeleteSeller(ctx context.Context, sellerID string) error {
+	if sellerID == "" {
+		return domain.ErrSellerIDRequired
+	}
+
+	sellerUUID, err := uuid.Parse(sellerID)
+	if err != nil {
+		return domain.ErrInvalidSellerID
+	}
+
+	return uc.repo.DeleteSeller(ctx, sellerUUID)
 }

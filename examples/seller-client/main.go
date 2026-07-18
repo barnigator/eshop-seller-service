@@ -14,126 +14,248 @@ import (
 	sellerv1 "github.com/barnigator/protos/gen/go/seller/v1"
 )
 
+const (
+	serverAddress  = "localhost:44045"
+	requestTimeout = 5 * time.Second
+	invalidID      = "invalid uuid"
+)
+
 func main() {
-	cc, err := grpc.NewClient(
-		"localhost:44045",
+	connection, err := grpc.NewClient(
+		serverAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		fatal("failed to connect: %v\n", err)
+		fatal("failed to create gRPC client: %v\n", err)
 	}
-	defer cc.Close()
+	defer connection.Close()
 
-	client := sellerv1.NewSellerServiceClient(cc)
+	client := sellerv1.NewSellerServiceClient(connection)
 
-	// тест 1. валидный uuid, продавец есть
-	checkGetSellerStatus(client, "550e8400-e29b-41d4-a716-446655440000")
+	runGetSellerStatusScenarios(client)
+	runCreateSellerScenarios(client)
+	runGetSellerScenarios(client)
+	runListSellersByUserIDScenarios(client)
+	runUpdateSellerScenarios(client)
+	runArchiveSellerScenarios(client)
+	runDeleteSellerScenarios(client)
+}
 
-	// тест 2. валидный uuid, продавца нет
-	checkGetSellerStatus(client, "550e8400-e29b-41d4-a716-446655441111")
+func runGetSellerStatusScenarios(client sellerv1.SellerServiceClient) {
+	printSection("GetSellerStatus")
 
-	//	тест 3. невалидный uuid
-	checkGetSellerStatus(client, "invalid uuid")
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
 
-	//	тест 4. создаем продавца
-	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "Nike", "  cool  ")
+	// Получение статуса существующего продавца.
+	checkGetSellerStatus(client, sellerID)
 
-	//	тест 5. создаем продавца с тем же id, но с другим брендом
-	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "  Adidas  ", "nice    ")
+	// Получение статуса несуществующего продавца.
+	checkGetSellerStatus(client, uuid.NewString())
 
-	//	тест 6. создаем продавца с тем же id, c тем же брендом
-	checkCreateSeller(client, "22211111-1111-1111-1111-111111111111", "adidas", "very nice")
+	// Получение статуса по некорректному UUID.
+	checkGetSellerStatus(client, invalidID)
+}
 
-	// тест 7. получаем продавца, который есть
-	checkGetSeller(client, "550e8400-e29b-41d4-a716-446655440000")
+func runCreateSellerScenarios(client sellerv1.SellerServiceClient) {
+	printSection("CreateSeller")
 
-	//	тест 8. получаем продавца, которого нет
-	checkGetSeller(client, "000e8400-e29b-41d4-a716-446655440000")
+	userID := uuid.NewString()
+	firstBrand := uniqueValue("Nike")
+	secondBrand := uniqueValue("Adidas")
 
-	//	тест 9. получаем продавца с помощью невалидного uuid
-	checkGetSeller(client, "invalid uuid")
+	// Создание первого продавца пользователя.
+	checkCreateSeller(
+		client,
+		userID,
+		firstBrand,
+		"  cool  ",
+	)
 
-	// тест 10. получаем список продавцов по user_id
-	checkListSellersByUserID(client, "33311111-1111-1111-1111-111111111111")
+	// Создание второго продавца того же пользователя.
+	checkCreateSeller(
+		client,
+		userID,
+		"  "+secondBrand+"  ",
+		"nice    ",
+	)
 
-	// тест 11. получаем пустой список продавцов по user_id
-	checkListSellersByUserID(client, "44411111-1111-1111-1111-111111111111")
+	// Попытка создать продавца с уже существующим названием бренда.
+	checkCreateSeller(
+		client,
+		userID,
+		secondBrand,
+		"very nice",
+	)
+}
 
-	checkUpdateSeller(client, "550e8400-e29b-41d4-a716-446655440000", "New Brand", "",
+func runGetSellerScenarios(client sellerv1.SellerServiceClient) {
+	printSection("GetSeller")
+
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+
+	// Получение существующего продавца.
+	checkGetSeller(client, sellerID)
+
+	// Получение несуществующего продавца.
+	checkGetSeller(
+		client,
+		uuid.NewString(),
+	)
+
+	// Получение продавца по некорректному UUID.
+	checkGetSeller(client, invalidID)
+}
+
+func runListSellersByUserIDScenarios(client sellerv1.SellerServiceClient) {
+	printSection("ListSellersByUserID")
+
+	_, userID, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+
+	// Получение непустого списка продавцов пользователя.
+	checkListSellersByUserID(client, userID)
+
+	// Получение пустого списка продавцов пользователя.
+	checkListSellersByUserID(client, uuid.NewString())
+}
+
+func runUpdateSellerScenarios(client sellerv1.SellerServiceClient) {
+	printSection("UpdateSeller")
+
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+
+	newBrand := uniqueValue("New-Brand")
+	anotherBrand := uniqueValue("Another-Brand")
+
+	// Обновление названия бренда.
+	checkUpdateSeller(
+		client,
+		sellerID,
+		newBrand,
+		"",
 		[]string{"brand_name"},
 	)
 
+	// Обновление описания.
 	checkUpdateSeller(
 		client,
-		"550e8400-e29b-41d4-a716-446655440000",
+		sellerID,
 		"",
 		"New description",
 		[]string{"description"},
 	)
 
+	// Одновременное обновление названия бренда и описания.
 	checkUpdateSeller(
 		client,
-		"550e8400-e29b-41d4-a716-446655440000",
-		"Another Brand",
+		sellerID,
+		anotherBrand,
 		"Another description",
 		[]string{"brand_name", "description"},
 	)
 
+	// Очистка описания.
 	checkUpdateSeller(
 		client,
-		"550e8400-e29b-41d4-a716-446655440000",
+		sellerID,
 		"",
 		"",
 		[]string{"description"},
 	)
 
+	// Попытка обновления с пустым FieldMask.
 	checkUpdateSeller(
 		client,
-		"550e8400-e29b-41d4-a716-446655440000",
+		sellerID,
 		"",
 		"",
 		[]string{},
 	)
 
+	// Попытка обновления неподдерживаемого поля.
 	checkUpdateSeller(
 		client,
-		"550e8400-e29b-41d4-a716-446655440000",
+		sellerID,
 		"",
 		"",
 		[]string{"status"},
 	)
 
+	// Попытка обновления несуществующего продавца.
 	checkUpdateSeller(
 		client,
 		uuid.NewString(),
-		"New Brand",
+		uniqueValue("Missing-brand"),
 		"",
 		[]string{"brand_name"},
 	)
+}
 
-	sellerId := "550e8400-e29b-41d4-a716-446655440000"
+func runArchiveSellerScenarios(client sellerv1.SellerServiceClient) {
+	printSection("ArchiveSeller")
 
-	checkArchiveSeller(client, sellerId)
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+	// Архивирование существующего продавца.
+	checkArchiveSeller(client, sellerID)
 
-	checkGetSellerStatus(client, sellerId)
+	// Проверка статуса после архивирования.
+	checkGetSellerStatus(client, sellerID)
 
-	checkArchiveSeller(client, sellerId)
+	// Повторное архивирование уже архивированного продавца.
+	checkArchiveSeller(client, sellerID)
 
-	checkGetSellerStatus(client, sellerId)
+	// Проверка статуса после повторного архивирования.
+	checkGetSellerStatus(client, sellerID)
 
+	// Попытка архивировать несуществующего продавца.
 	checkArchiveSeller(client, uuid.NewString())
 
+	// Попытка архивировать продавца без seller_id.
 	checkArchiveSeller(client, "")
 }
 
-func fatal(format string, err error) {
-	fmt.Fprintf(os.Stderr, format, err)
-	os.Exit(1)
+func runDeleteSellerScenarios(client sellerv1.SellerServiceClient) {
+	printSection("DeleteSeller")
+
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+	// Удаление существующего продавца.
+	checkDeleteSeller(client, sellerID)
+
+	// Повторное удаление уже удалённого продавца.
+	checkDeleteSeller(client, sellerID)
+
+	// Проверка недоступности продавца после удаления.
+	checkGetSeller(client, sellerID)
+
+	// Попытка удалить несуществующего продавца.
+	checkDeleteSeller(client, uuid.NewString())
+
+	// Попытка удалить продавца без seller_id.
+	checkDeleteSeller(client, "")
 }
 
-func checkGetSellerStatus(client sellerv1.SellerServiceClient, sellerID string) {
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func checkGetSellerStatus(
+	client sellerv1.SellerServiceClient,
+	sellerID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	req := &sellerv1.GetSellerStatusRequest{
@@ -147,11 +269,15 @@ func checkGetSellerStatus(client sellerv1.SellerServiceClient, sellerID string) 
 	}
 
 	fmt.Println("seller status:", resp.Status)
-
 }
 
-func checkCreateSeller(client sellerv1.SellerServiceClient, userID, brandName, description string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func checkCreateSeller(
+	client sellerv1.SellerServiceClient,
+	userID string,
+	brandName string,
+	description string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	req := &sellerv1.CreateSellerRequest{
@@ -169,8 +295,11 @@ func checkCreateSeller(client sellerv1.SellerServiceClient, userID, brandName, d
 	fmt.Println("seller created:", resp.Seller)
 }
 
-func checkGetSeller(client sellerv1.SellerServiceClient, sellerID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func checkGetSeller(
+	client sellerv1.SellerServiceClient,
+	sellerID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	req := &sellerv1.GetSellerRequest{
@@ -186,8 +315,11 @@ func checkGetSeller(client sellerv1.SellerServiceClient, sellerID string) {
 	fmt.Println("seller:", resp.Seller)
 }
 
-func checkListSellersByUserID(client sellerv1.SellerServiceClient, userID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func checkListSellersByUserID(
+	client sellerv1.SellerServiceClient,
+	userID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	req := &sellerv1.ListSellersByUserIDRequest{
@@ -203,8 +335,14 @@ func checkListSellersByUserID(client sellerv1.SellerServiceClient, userID string
 	fmt.Println("sellers:", resp.Sellers)
 }
 
-func checkUpdateSeller(client sellerv1.SellerServiceClient, sellerID string, brandName string, description string, paths []string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func checkUpdateSeller(
+	client sellerv1.SellerServiceClient,
+	sellerID string,
+	brandName string,
+	description string,
+	paths []string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	req := &sellerv1.UpdateSellerRequest{
@@ -222,27 +360,90 @@ func checkUpdateSeller(client sellerv1.SellerServiceClient, sellerID string, bra
 		return
 	}
 
-	fmt.Println("seller:", resp.Seller)
+	fmt.Println("seller updated:", resp.Seller)
 }
 
-func checkArchiveSeller(client sellerv1.SellerServiceClient, sellerID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func checkArchiveSeller(
+	client sellerv1.SellerServiceClient,
+	sellerID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
 	req := &sellerv1.ArchiveSellerRequest{
 		SellerId: sellerID,
 	}
 
-	empty, err := client.ArchiveSeller(ctx, req)
+	resp, err := client.ArchiveSeller(ctx, req)
 	if err != nil {
 		fmt.Printf("failed to archive seller: %v\n", err)
 		return
 	}
 
-	if empty == nil {
-		fmt.Println("unexpected nil response")
+	if resp == nil {
+		fmt.Println("failed to archive seller: unexpected nil response")
 		return
 	}
 
 	fmt.Println("seller archived successfully")
+}
+
+func checkDeleteSeller(
+	client sellerv1.SellerServiceClient,
+	sellerID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req := &sellerv1.DeleteSellerRequest{
+		SellerId: sellerID,
+	}
+
+	resp, err := client.DeleteSeller(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to delete seller: %v\n", err)
+		return
+	}
+
+	if resp == nil {
+		fmt.Println("failed to delete seller: unexpected nil response")
+		return
+	}
+
+	fmt.Println("seller deleted successfully")
+}
+
+func createTestSeller(client sellerv1.SellerServiceClient) (string, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req := &sellerv1.CreateSellerRequest{
+		UserId:      uuid.NewString(),
+		BrandName:   uniqueValue("Brand"),
+		Description: uniqueValue("Description"),
+	}
+
+	resp, err := client.CreateSeller(ctx, req)
+	if err != nil {
+		return "", "", err
+	}
+
+	if resp.Seller == nil {
+		return "", "", fmt.Errorf("create seller returned nil seller")
+	}
+
+	return resp.Seller.Id, resp.Seller.UserId, nil
+}
+
+func uniqueValue(prefix string) string {
+	return fmt.Sprintf("%s-%s", prefix, uuid.NewString()[:8])
+}
+
+func printSection(name string) {
+	fmt.Printf("\n========== %s ==========\n", name)
+}
+
+func fatal(format string, err error) {
+	fmt.Fprintf(os.Stderr, format, err)
+	os.Exit(1)
 }

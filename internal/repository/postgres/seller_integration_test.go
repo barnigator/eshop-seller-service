@@ -473,6 +473,93 @@ func TestSellerRepository_ArchiveSeller_NotFound(t *testing.T) {
 	}
 }
 
+func TestSellerRepository_ArchiveSeller_DeletedSeller(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Adidas",
+		Description: "cool brand",
+		Status:      domain.SellerStatusPending,
+	}
+
+	createdSeller, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	err = repo.DeleteSeller(context.Background(), createdSeller.ID)
+	if err != nil {
+		t.Fatalf("delete seller: %v", err)
+	}
+
+	err = repo.ArchiveSeller(context.Background(), createdSeller.ID)
+	if !errors.Is(err, domain.ErrSellerNotFound) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrSellerNotFound)
+	}
+}
+
+func TestSellerRepository_DeleteSeller(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Adidas",
+		Description: "cool brand",
+		Status:      domain.SellerStatusPending,
+	}
+
+	createdSeller, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	err = repo.DeleteSeller(context.Background(), createdSeller.ID)
+	if err != nil {
+		t.Fatalf("delete seller: %v", err)
+	}
+
+	_, err = repo.GetSellerByID(context.Background(), createdSeller.ID)
+	if !errors.Is(err, domain.ErrSellerNotFound) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrSellerNotFound)
+	}
+}
+
+func TestSellerRepository_DeleteSeller_DoubleDelete(t *testing.T) {
+	repo := newRepo(t)
+
+	seller := domain.Seller{
+		UserID:      uuid.New(),
+		BrandName:   "Adidas",
+		Description: "cool brand",
+		Status:      domain.SellerStatusPending,
+	}
+
+	createdSeller, err := repo.CreateSeller(context.Background(), seller)
+	if err != nil {
+		t.Fatalf("create seller: %v", err)
+	}
+
+	err = repo.DeleteSeller(context.Background(), createdSeller.ID)
+	if err != nil {
+		t.Fatalf("delete seller: %v", err)
+	}
+
+	err = repo.DeleteSeller(context.Background(), createdSeller.ID)
+	if !errors.Is(err, domain.ErrSellerNotFound) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrSellerNotFound)
+	}
+}
+
+func TestSellerRepository_DeleteSeller_NotFound(t *testing.T) {
+	repo := newRepo(t)
+
+	err := repo.DeleteSeller(context.Background(), uuid.New())
+	if !errors.Is(err, domain.ErrSellerNotFound) {
+		t.Fatalf("unexpected error: got %v, want %v", err, domain.ErrSellerNotFound)
+	}
+}
+
 func newRepo(t *testing.T) *SellerRepository {
 	t.Helper()
 
