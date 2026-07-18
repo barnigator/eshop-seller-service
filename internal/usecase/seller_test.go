@@ -771,7 +771,7 @@ func TestSellerUseCase_ArchiveSeller(t *testing.T) {
 			err := uc.ArchiveSeller(context.Background(), tt.sellerID)
 
 			if repo.called != tt.expectedRepoCalled {
-				t.Fatalf("unexpected repo call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+				t.Fatalf("unexpected sellerRepo call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
 			}
 
 			if tt.expectedErr != nil {
@@ -851,7 +851,7 @@ func TestSellerUseCase_DeleteSeller(t *testing.T) {
 			err := uc.DeleteSeller(context.Background(), tt.sellerID)
 
 			if repo.called != tt.expectedRepoCalled {
-				t.Fatalf("unexpected repo call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
+				t.Fatalf("unexpected sellerRepo call state: got %v, want %v", repo.called, tt.expectedRepoCalled)
 			}
 
 			if tt.expectedErr != nil {

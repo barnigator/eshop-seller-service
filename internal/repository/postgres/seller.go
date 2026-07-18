@@ -97,15 +97,15 @@ const (
 `
 )
 
-type SellerRepository struct {
+type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func New(pool *pgxpool.Pool) *SellerRepository {
-	return &SellerRepository{pool: pool}
+func New(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
-func (r *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID) (domain.Seller, error) {
+func (r *Repository) GetSellerByID(ctx context.Context, sellerID uuid.UUID) (domain.Seller, error) {
 	var seller domain.Seller
 	var status string
 
@@ -135,7 +135,7 @@ func (r *SellerRepository) GetSellerByID(ctx context.Context, sellerID uuid.UUID
 	return seller, nil
 }
 
-func (r *SellerRepository) CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error) {
+func (r *Repository) CreateSeller(ctx context.Context, seller domain.Seller) (domain.Seller, error) {
 	var createdSeller domain.Seller
 	var status string
 
@@ -179,7 +179,7 @@ func (r *SellerRepository) CreateSeller(ctx context.Context, seller domain.Selle
 	return createdSeller, nil
 }
 
-func (r *SellerRepository) ListSellersByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Seller, error) {
+func (r *Repository) ListSellersByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Seller, error) {
 	rows, err := r.pool.Query(
 		ctx,
 		listSellersByUserIDQuery,
@@ -223,7 +223,7 @@ func (r *SellerRepository) ListSellersByUserID(ctx context.Context, userID uuid.
 	return sellers, nil
 }
 
-func (r *SellerRepository) UpdateSeller(ctx context.Context, sellerID uuid.UUID, brandName *string, description *string) (domain.Seller, error) {
+func (r *Repository) UpdateSeller(ctx context.Context, sellerID uuid.UUID, brandName *string, description *string) (domain.Seller, error) {
 	var seller domain.Seller
 	var status string
 
@@ -264,7 +264,7 @@ func (r *SellerRepository) UpdateSeller(ctx context.Context, sellerID uuid.UUID,
 	return seller, nil
 }
 
-func (r *SellerRepository) ArchiveSeller(ctx context.Context, sellerID uuid.UUID) error {
+func (r *Repository) ArchiveSeller(ctx context.Context, sellerID uuid.UUID) error {
 	var exists bool
 
 	err := r.pool.QueryRow(
@@ -283,7 +283,7 @@ func (r *SellerRepository) ArchiveSeller(ctx context.Context, sellerID uuid.UUID
 	return nil
 }
 
-func (r *SellerRepository) DeleteSeller(ctx context.Context, sellerID uuid.UUID) error {
+func (r *Repository) DeleteSeller(ctx context.Context, sellerID uuid.UUID) error {
 	tag, err := r.pool.Exec(ctx, deleteSellerQuery, sellerID)
 	if err != nil {
 		return fmt.Errorf("delete seller: %w", err)

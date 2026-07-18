@@ -20,16 +20,20 @@ type SellerUseCase interface {
 }
 
 type Handler struct {
-	uc SellerUseCase
+	sellerUC     SellerUseCase
+	socialLinkUC SocialLinkUseCase
 	sellerv1.UnimplementedSellerServiceServer
 }
 
-func New(uc SellerUseCase) *Handler {
-	return &Handler{uc: uc}
+func New(sellerUC SellerUseCase, socialLinkUC SocialLinkUseCase) *Handler {
+	return &Handler{
+		sellerUC:     sellerUC,
+		socialLinkUC: socialLinkUC,
+	}
 }
 
 func (h *Handler) GetSellerStatus(ctx context.Context, req *sellerv1.GetSellerStatusRequest) (*sellerv1.GetSellerStatusResponse, error) {
-	st, err := h.uc.GetSellerStatus(ctx, req.SellerId)
+	st, err := h.sellerUC.GetSellerStatus(ctx, req.SellerId)
 	if err != nil {
 		return nil, convertError(err)
 	}
@@ -39,7 +43,7 @@ func (h *Handler) GetSellerStatus(ctx context.Context, req *sellerv1.GetSellerSt
 }
 
 func (h *Handler) CreateSeller(ctx context.Context, req *sellerv1.CreateSellerRequest) (*sellerv1.SellerResponse, error) {
-	seller, err := h.uc.CreateSeller(ctx, req.UserId, req.BrandName, req.Description)
+	seller, err := h.sellerUC.CreateSeller(ctx, req.UserId, req.BrandName, req.Description)
 	if err != nil {
 		return nil, convertError(err)
 	}
@@ -49,7 +53,7 @@ func (h *Handler) CreateSeller(ctx context.Context, req *sellerv1.CreateSellerRe
 }
 
 func (h *Handler) GetSeller(ctx context.Context, req *sellerv1.GetSellerRequest) (*sellerv1.SellerResponse, error) {
-	seller, err := h.uc.GetSeller(ctx, req.SellerId)
+	seller, err := h.sellerUC.GetSeller(ctx, req.SellerId)
 	if err != nil {
 		return nil, convertError(err)
 	}
@@ -60,7 +64,7 @@ func (h *Handler) GetSeller(ctx context.Context, req *sellerv1.GetSellerRequest)
 }
 
 func (h *Handler) ListSellersByUserID(ctx context.Context, req *sellerv1.ListSellersByUserIDRequest) (*sellerv1.ListSellersResponse, error) {
-	sellers, err := h.uc.ListSellersByUserID(ctx, req.UserId)
+	sellers, err := h.sellerUC.ListSellersByUserID(ctx, req.UserId)
 	if err != nil {
 		return nil, convertError(err)
 	}
@@ -94,7 +98,7 @@ func (h *Handler) UpdateSeller(ctx context.Context, req *sellerv1.UpdateSellerRe
 		}
 	}
 
-	seller, err := h.uc.UpdateSeller(ctx, req.SellerId, brandName, description)
+	seller, err := h.sellerUC.UpdateSeller(ctx, req.SellerId, brandName, description)
 	if err != nil {
 		return nil, convertError(err)
 	}
@@ -105,7 +109,7 @@ func (h *Handler) UpdateSeller(ctx context.Context, req *sellerv1.UpdateSellerRe
 }
 
 func (h *Handler) ArchiveSeller(ctx context.Context, req *sellerv1.ArchiveSellerRequest) (*emptypb.Empty, error) {
-	err := h.uc.ArchiveSeller(ctx, req.SellerId)
+	err := h.sellerUC.ArchiveSeller(ctx, req.SellerId)
 	if err != nil {
 		return nil, convertError(err)
 	}
@@ -114,7 +118,7 @@ func (h *Handler) ArchiveSeller(ctx context.Context, req *sellerv1.ArchiveSeller
 }
 
 func (h *Handler) DeleteSeller(ctx context.Context, req *sellerv1.DeleteSellerRequest) (*emptypb.Empty, error) {
-	err := h.uc.DeleteSeller(ctx, req.SellerId)
+	err := h.sellerUC.DeleteSeller(ctx, req.SellerId)
 	if err != nil {
 		return nil, convertError(err)
 	}

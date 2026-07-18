@@ -15,4 +15,8 @@ var (
 	ErrBrandAlreadyExists = errors.New("brand already exists")
 
 	ErrNoFieldsToUpdate = errors.New("no fields to update")
+
+	ErrSocialLinkNotFound    = errors.New("social link not found")
+	ErrInvalidSocialLinkType = errors.New("invalid social link type")
+	ErrURLRequired           = errors.New("url is required")
 )

@@ -36,13 +36,13 @@ func (a *App) Run() error {
 	}
 	defer pool.Close()
 
-	sellerRepo := postgres.New(pool)
+	repo := postgres.New(pool)
 
-	sellerUseCase := usecase.New(sellerRepo)
+	useCase := usecase.New(repo, repo)
 
-	sellerHandler := handler.New(sellerUseCase)
+	handlers := handler.New(useCase, useCase)
 
-	grpcServer := server.New(a.cfg.GRPC.Port, sellerHandler)
+	grpcServer := server.New(a.cfg.GRPC.Port, handlers)
 
 	return grpcServer.Run()
 }

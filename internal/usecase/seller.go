@@ -18,15 +18,19 @@ type SellerRepository interface {
 	DeleteSeller(ctx context.Context, sellerID uuid.UUID) error
 }
 
-type SellerUseCase struct {
-	repo SellerRepository
+type UseCase struct {
+	sellerRepo     SellerRepository
+	socialLinkRepo SocialLinkRepository
 }
 
-func New(repo SellerRepository) *SellerUseCase {
-	return &SellerUseCase{repo: repo}
+func New(sellerRepo SellerRepository, socialLinkRepo SocialLinkRepository) *UseCase {
+	return &UseCase{
+		sellerRepo:     sellerRepo,
+		socialLinkRepo: socialLinkRepo,
+	}
 }
 
-func (uc *SellerUseCase) GetSellerStatus(ctx context.Context, sellerID string) (domain.SellerStatus, error) {
+func (uc *UseCase) GetSellerStatus(ctx context.Context, sellerID string) (domain.SellerStatus, error) {
 	if sellerID == "" {
 		return domain.SellerStatusUnspecified, domain.ErrSellerIDRequired
 	}
@@ -36,7 +40,7 @@ func (uc *SellerUseCase) GetSellerStatus(ctx context.Context, sellerID string) (
 		return domain.SellerStatusUnspecified, domain.ErrInvalidSellerID
 	}
 
-	seller, err := uc.repo.GetSellerByID(ctx, sellerUUID)
+	seller, err := uc.sellerRepo.GetSellerByID(ctx, sellerUUID)
 	if err != nil {
 		return domain.SellerStatusUnspecified, err
 	}
@@ -44,7 +48,7 @@ func (uc *SellerUseCase) GetSellerStatus(ctx context.Context, sellerID string) (
 	return seller.Status, nil
 }
 
-func (uc *SellerUseCase) CreateSeller(ctx context.Context, userID string, brandName string, description string) (domain.Seller, error) {
+func (uc *UseCase) CreateSeller(ctx context.Context, userID string, brandName string, description string) (domain.Seller, error) {
 	if userID == "" {
 		return domain.Seller{}, domain.ErrUserIDRequired
 	}
@@ -73,7 +77,7 @@ func (uc *SellerUseCase) CreateSeller(ctx context.Context, userID string, brandN
 		Status:      domain.SellerStatusPending,
 	}
 
-	createdSeller, err := uc.repo.CreateSeller(ctx, seller)
+	createdSeller, err := uc.sellerRepo.CreateSeller(ctx, seller)
 	if err != nil {
 		return domain.Seller{}, err
 	}
@@ -81,7 +85,7 @@ func (uc *SellerUseCase) CreateSeller(ctx context.Context, userID string, brandN
 	return createdSeller, nil
 }
 
-func (uc *SellerUseCase) GetSeller(ctx context.Context, sellerID string) (domain.Seller, error) {
+func (uc *UseCase) GetSeller(ctx context.Context, sellerID string) (domain.Seller, error) {
 	if sellerID == "" {
 		return domain.Seller{}, domain.ErrSellerIDRequired
 	}
@@ -91,7 +95,7 @@ func (uc *SellerUseCase) GetSeller(ctx context.Context, sellerID string) (domain
 		return domain.Seller{}, domain.ErrInvalidSellerID
 	}
 
-	seller, err := uc.repo.GetSellerByID(ctx, sellerUUID)
+	seller, err := uc.sellerRepo.GetSellerByID(ctx, sellerUUID)
 	if err != nil {
 		return domain.Seller{}, err
 	}
@@ -99,7 +103,7 @@ func (uc *SellerUseCase) GetSeller(ctx context.Context, sellerID string) (domain
 	return seller, nil
 }
 
-func (uc *SellerUseCase) ListSellersByUserID(ctx context.Context, userID string) ([]domain.Seller, error) {
+func (uc *UseCase) ListSellersByUserID(ctx context.Context, userID string) ([]domain.Seller, error) {
 	if userID == "" {
 		return nil, domain.ErrUserIDRequired
 	}
@@ -109,7 +113,7 @@ func (uc *SellerUseCase) ListSellersByUserID(ctx context.Context, userID string)
 		return nil, domain.ErrInvalidUserID
 	}
 
-	sellers, err := uc.repo.ListSellersByUserID(ctx, userUUID)
+	sellers, err := uc.sellerRepo.ListSellersByUserID(ctx, userUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +121,7 @@ func (uc *SellerUseCase) ListSellersByUserID(ctx context.Context, userID string)
 	return sellers, nil
 }
 
-func (uc *SellerUseCase) UpdateSeller(ctx context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error) {
+func (uc *UseCase) UpdateSeller(ctx context.Context, sellerID string, brandName *string, description *string) (domain.Seller, error) {
 	if sellerID == "" {
 		return domain.Seller{}, domain.ErrSellerIDRequired
 	}
@@ -150,7 +154,7 @@ func (uc *SellerUseCase) UpdateSeller(ctx context.Context, sellerID string, bran
 		description = &cleanDescription
 	}
 
-	seller, err := uc.repo.UpdateSeller(ctx, sellerUUID, brandName, description)
+	seller, err := uc.sellerRepo.UpdateSeller(ctx, sellerUUID, brandName, description)
 	if err != nil {
 		return domain.Seller{}, err
 	}
@@ -158,7 +162,7 @@ func (uc *SellerUseCase) UpdateSeller(ctx context.Context, sellerID string, bran
 	return seller, nil
 }
 
-func (uc *SellerUseCase) ArchiveSeller(ctx context.Context, sellerID string) error {
+func (uc *UseCase) ArchiveSeller(ctx context.Context, sellerID string) error {
 	if sellerID == "" {
 		return domain.ErrSellerIDRequired
 	}
@@ -168,10 +172,10 @@ func (uc *SellerUseCase) ArchiveSeller(ctx context.Context, sellerID string) err
 		return domain.ErrInvalidSellerID
 	}
 
-	return uc.repo.ArchiveSeller(ctx, sellerUUID)
+	return uc.sellerRepo.ArchiveSeller(ctx, sellerUUID)
 }
 
-func (uc *SellerUseCase) DeleteSeller(ctx context.Context, sellerID string) error {
+func (uc *UseCase) DeleteSeller(ctx context.Context, sellerID string) error {
 	if sellerID == "" {
 		return domain.ErrSellerIDRequired
 	}
@@ -181,5 +185,5 @@ func (uc *SellerUseCase) DeleteSeller(ctx context.Context, sellerID string) erro
 		return domain.ErrInvalidSellerID
 	}
 
-	return uc.repo.DeleteSeller(ctx, sellerUUID)
+	return uc.sellerRepo.DeleteSeller(ctx, sellerUUID)
 }

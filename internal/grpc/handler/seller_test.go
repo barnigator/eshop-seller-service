@@ -51,6 +51,12 @@ func (f *fakeSellerUsecase) ArchiveSeller(_ context.Context, _ string) error {
 	return f.err
 }
 
+func (f *fakeSellerUsecase) DeleteSeller(_ context.Context, _ string) error {
+	f.called = true
+
+	return f.err
+}
+
 func TestHandler_UpdateSeller(t *testing.T) {
 	tests := []struct {
 		name                string

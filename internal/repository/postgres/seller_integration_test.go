@@ -560,7 +560,7 @@ func TestSellerRepository_DeleteSeller_NotFound(t *testing.T) {
 	}
 }
 
-func newRepo(t *testing.T) *SellerRepository {
+func newRepo(t *testing.T) *Repository {
 	t.Helper()
 
 	dsn := os.Getenv("POSTGRES_TEST_DSN")
