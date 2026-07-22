@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var ErrUnknownLinkType = errors.New("unknown link type")
+
 func invalidArgument(message string) error {
 	return status.Error(codes.InvalidArgument, message)
 }
@@ -32,6 +34,12 @@ func convertError(err error) error {
 		return status.Error(codes.NotFound, domain.ErrSellerNotFound.Error())
 	case errors.Is(err, domain.ErrNoFieldsToUpdate):
 		return status.Error(codes.InvalidArgument, domain.ErrNoFieldsToUpdate.Error())
+	case errors.Is(err, domain.ErrSocialLinkNotFound):
+		return status.Error(codes.NotFound, domain.ErrSocialLinkNotFound.Error())
+	case errors.Is(err, domain.ErrInvalidSocialLinkType):
+		return status.Error(codes.InvalidArgument, domain.ErrInvalidSocialLinkType.Error())
+	case errors.Is(err, domain.ErrURLRequired):
+		return status.Error(codes.InvalidArgument, domain.ErrURLRequired.Error())
 	default:
 		return status.Error(codes.Internal, "internal error")
 	}

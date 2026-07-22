@@ -846,7 +846,7 @@ func TestSellerUseCase_DeleteSeller(t *testing.T) {
 				err: tt.repositoryErr,
 			}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			err := uc.DeleteSeller(context.Background(), tt.sellerID)
 

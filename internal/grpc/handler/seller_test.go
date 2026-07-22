@@ -138,7 +138,7 @@ func TestHandler_UpdateSeller(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			uc := &fakeSellerUsecase{}
 
-			h := New(uc)
+			h := New(uc, uc)
 
 			req := &sellerv1.UpdateSellerRequest{
 				BrandName:   tt.brandName,
