@@ -11,6 +11,7 @@ import (
 type SocialLinkRepository interface {
 	AddSocialLink(ctx context.Context, link domain.SocialLink) (domain.SocialLink, error)
 	ListSocialLinks(ctx context.Context, sellerID uuid.UUID) ([]domain.SocialLink, error)
+	DeleteSocialLink(ctx context.Context, linkID uuid.UUID) error
 }
 
 func (uc *UseCase) AddSocialLink(ctx context.Context, sellerID string, linkType domain.SocialLinkType, url string) (domain.SocialLink, error) {
@@ -53,4 +54,17 @@ func (uc *UseCase) ListSocialLinks(ctx context.Context, sellerID string) ([]doma
 	}
 
 	return uc.socialLinkRepo.ListSocialLinks(ctx, sellerUUID)
+}
+
+func (uc *UseCase) DeleteSocialLink(ctx context.Context, linkID string) error {
+	if linkID != "" {
+		return domain.ErrSocialLinkIDRequired
+	}
+
+	linkUUID, err := uuid.Parse(linkID)
+	if err != nil {
+		return domain.ErrInvalidSocialLinkID
+	}
+
+	return uc.socialLinkRepo.DeleteSocialLink(ctx, linkUUID)
 }

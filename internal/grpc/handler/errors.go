@@ -34,6 +34,10 @@ func convertError(err error) error {
 		return status.Error(codes.NotFound, domain.ErrSellerNotFound.Error())
 	case errors.Is(err, domain.ErrNoFieldsToUpdate):
 		return status.Error(codes.InvalidArgument, domain.ErrNoFieldsToUpdate.Error())
+	case errors.Is(err, domain.ErrSocialLinkIDRequired):
+		return status.Error(codes.InvalidArgument, domain.ErrSocialLinkIDRequired.Error())
+	case errors.Is(err, domain.ErrInvalidSocialLinkID):
+		return status.Error(codes.InvalidArgument, domain.ErrInvalidSocialLinkID.Error())
 	case errors.Is(err, domain.ErrSocialLinkNotFound):
 		return status.Error(codes.NotFound, domain.ErrSocialLinkNotFound.Error())
 	case errors.Is(err, domain.ErrInvalidSocialLinkType):

@@ -16,6 +16,8 @@ var (
 
 	ErrNoFieldsToUpdate = errors.New("no fields to update")
 
+	ErrSocialLinkIDRequired  = errors.New("social_link_id is required")
+	ErrInvalidSocialLinkID   = errors.New("invalid social_link_id")
 	ErrSocialLinkNotFound    = errors.New("social link not found")
 	ErrInvalidSocialLinkType = errors.New("invalid social link type")
 	ErrURLRequired           = errors.New("url is required")

@@ -40,6 +40,10 @@ FROM social_links
 		WHERE seller_id = $1
 		ORDER BY (created_at, id);
 `
+	deleteSocialLinkQuery = `
+		DELETE FROM social_links
+		WHERE id = $1;
+`
 )
 
 func (r *Repository) AddSocialLink(ctx context.Context, link domain.SocialLink) (domain.SocialLink, error) {
@@ -103,4 +107,17 @@ func (r *Repository) ListSocialLinks(ctx context.Context, sellerID uuid.UUID) ([
 	}
 
 	return links, nil
+}
+
+func (r *Repository) DeleteSocialLink(ctx context.Context, linkID uuid.UUID) error {
+	tag, err := r.pool.Exec(ctx, deleteSellerQuery, linkID)
+	if err != nil {
+		return fmt.Errorf("delete link: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return domain.ErrSocialLinkNotFound
+	}
+
+	return nil
 }
