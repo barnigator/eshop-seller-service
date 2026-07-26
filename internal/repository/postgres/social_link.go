@@ -110,7 +110,7 @@ func (r *Repository) ListSocialLinks(ctx context.Context, sellerID uuid.UUID) ([
 }
 
 func (r *Repository) DeleteSocialLink(ctx context.Context, linkID uuid.UUID) error {
-	tag, err := r.pool.Exec(ctx, deleteSellerQuery, linkID)
+	tag, err := r.pool.Exec(ctx, deleteSocialLinkQuery, linkID)
 	if err != nil {
 		return fmt.Errorf("delete link: %w", err)
 	}

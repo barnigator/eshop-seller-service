@@ -21,6 +21,21 @@ type fakeSellerUsecase struct {
 	receivedDescription *string
 }
 
+func (f *fakeSellerUsecase) AddSocialLink(ctx context.Context, sellerID string, linkType domain.SocialLinkType, url string) (domain.SocialLink, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (f *fakeSellerUsecase) ListSocialLinks(ctx context.Context, sellerID string) ([]domain.SocialLink, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (f *fakeSellerUsecase) DeleteSocialLink(ctx context.Context, linkID string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (f *fakeSellerUsecase) GetSellerStatus(_ context.Context, _ string) (domain.SellerStatus, error) {
 	return f.seller.Status, f.err
 }

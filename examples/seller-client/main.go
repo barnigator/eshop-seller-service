@@ -524,7 +524,7 @@ func checkListSocialLinks(
 		return
 	}
 
-	fmt.Println("social links:", resp.Link)
+	fmt.Println("social links:", resp.Links)
 }
 
 func checkDeleteSocialLink(

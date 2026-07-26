@@ -34,7 +34,7 @@ func (h *Handler) ListSocialLinks(ctx context.Context, req *sellerv1.ListSocialL
 	}
 
 	return &sellerv1.ListSocialLinksResponse{
-		Link: convertLinks(links),
+		Links: convertLinks(links),
 	}, nil
 }
 

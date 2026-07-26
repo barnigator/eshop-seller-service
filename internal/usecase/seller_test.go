@@ -22,6 +22,21 @@ type fakeSellerRepository struct {
 	receivedDescription *string
 }
 
+func (f *fakeSellerRepository) AddSocialLink(ctx context.Context, link domain.SocialLink) (domain.SocialLink, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (f *fakeSellerRepository) ListSocialLinks(ctx context.Context, sellerID uuid.UUID) ([]domain.SocialLink, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (f *fakeSellerRepository) DeleteSocialLink(ctx context.Context, linkID uuid.UUID) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (f *fakeSellerRepository) GetSellerByID(_ context.Context, sellerID uuid.UUID) (domain.Seller, error) {
 	f.called = true
 	f.receivedSellerID = sellerID
@@ -121,7 +136,7 @@ func TestSellerUseCase_GetSeller(t *testing.T) {
 				err:    tt.repositoryErr,
 			}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			seller, err := uc.GetSeller(context.Background(), tt.sellerID)
 
@@ -313,7 +328,7 @@ func TestSellerUseCase_CreateSeller(t *testing.T) {
 				err:    tt.createErr,
 			}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			seller, err := uc.CreateSeller(context.Background(), tt.userID, tt.brandName, tt.description)
 
@@ -421,7 +436,7 @@ func TestSellerUseCase_GetSellerStatus(t *testing.T) {
 				err:    tt.repositoryErr,
 			}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			status, err := uc.GetSellerStatus(context.Background(), tt.sellerID)
 
@@ -549,7 +564,7 @@ func TestSellerUseCase_ListSellersByUserID(t *testing.T) {
 				err:     tt.repositoryErr,
 			}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			sellers, err := uc.ListSellersByUserID(context.Background(), tt.userID)
 
@@ -683,7 +698,7 @@ func TestSellerUseCase_UpdateSeller(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &fakeSellerRepository{}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			_, err := uc.UpdateSeller(context.Background(), tt.sellerID, tt.brandName, tt.description)
 
@@ -766,7 +781,7 @@ func TestSellerUseCase_ArchiveSeller(t *testing.T) {
 				err: tt.repositoryErr,
 			}
 
-			uc := New(repo)
+			uc := New(repo, repo)
 
 			err := uc.ArchiveSeller(context.Background(), tt.sellerID)
 
