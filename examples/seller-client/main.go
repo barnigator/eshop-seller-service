@@ -39,6 +39,9 @@ func main() {
 	runUpdateSellerScenarios(client)
 	runArchiveSellerScenarios(client)
 	runDeleteSellerScenarios(client)
+	runAddSocialLinkScenarios(client)
+	runListSocialLinksScenarios(client)
+	runDeleteSocialLinkScenarios(client)
 }
 
 func runGetSellerStatusScenarios(client sellerv1.SellerServiceClient) {
@@ -251,6 +254,71 @@ func runDeleteSellerScenarios(client sellerv1.SellerServiceClient) {
 	checkDeleteSeller(client, "")
 }
 
+func runAddSocialLinkScenarios(client sellerv1.SellerServiceClient) {
+	printSection("AddSocialLink")
+
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+
+	checkAddSocialLink(
+		client,
+		sellerID,
+		sellerv1.SocialLinkType_SOCIAL_LINK_TYPE_TELEGRAM,
+		uniqueValue("URL"),
+	)
+
+	checkAddSocialLink(
+		client,
+		"",
+		sellerv1.SocialLinkType_SOCIAL_LINK_TYPE_TELEGRAM,
+		uniqueValue("URL"),
+	)
+
+	checkAddSocialLink(
+		client,
+		uuid.NewString(),
+		sellerv1.SocialLinkType_SOCIAL_LINK_TYPE_UNSPECIFIED,
+		uniqueValue("URL"),
+	)
+
+	checkAddSocialLink(
+		client,
+		uuid.NewString(),
+		sellerv1.SocialLinkType_SOCIAL_LINK_TYPE_TELEGRAM,
+		"",
+	)
+}
+
+func runListSocialLinksScenarios(client sellerv1.SellerServiceClient) {
+	printSection("ListSocialLinks")
+
+	sellerID, _, err := createTestLink(client)
+	if err != nil {
+		fatal("failed to create test link: %v\n", err)
+	}
+
+	checkListSocialLinks(client, sellerID)
+
+	checkListSocialLinks(client, uuid.NewString())
+}
+
+func runDeleteSocialLinkScenarios(client sellerv1.SellerServiceClient) {
+	printSection("DeleteSocialLink")
+
+	sellerID, linkID, err := createTestLink(client)
+	if err != nil {
+		fatal("failed to create test link: %v\n", err)
+	}
+
+	checkListSocialLinks(client, sellerID)
+
+	checkDeleteSocialLink(client, linkID)
+
+	checkDeleteSocialLink(client, linkID)
+}
+
 func checkGetSellerStatus(
 	client sellerv1.SellerServiceClient,
 	sellerID string,
@@ -413,6 +481,72 @@ func checkDeleteSeller(
 	fmt.Println("seller deleted successfully")
 }
 
+func checkAddSocialLink(
+	client sellerv1.SellerServiceClient,
+	sellerID string, linkType sellerv1.SocialLinkType, url string) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req := &sellerv1.AddSocialLinkRequest{
+		SellerId: sellerID,
+		Type:     linkType,
+		Url:      url,
+	}
+
+	resp, err := client.AddSocialLink(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to add social link: %v\n", err)
+		return
+	}
+
+	if resp == nil {
+		fmt.Printf("failed to add social link: unexpected nill response\n")
+		return
+	}
+
+	fmt.Println("social link added:", resp.Link)
+}
+
+func checkListSocialLinks(
+	client sellerv1.SellerServiceClient,
+	sellerID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req := &sellerv1.ListSocialLinksRequest{
+		SellerId: sellerID,
+	}
+
+	resp, err := client.ListSocialLinks(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to list social links: %v\n", err)
+		return
+	}
+
+	fmt.Println("social links:", resp.Link)
+}
+
+func checkDeleteSocialLink(
+	client sellerv1.SellerServiceClient,
+	linkID string,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req := &sellerv1.DeleteSocialLinkRequest{
+		LinkId: linkID,
+	}
+
+	_, err := client.DeleteSocialLink(ctx, req)
+	if err != nil {
+		fmt.Printf("failed to delete social link: %v\n", err)
+		return
+	}
+
+	fmt.Println("social link deleted successfully")
+}
+
 func createTestSeller(client sellerv1.SellerServiceClient) (string, string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
@@ -433,6 +567,34 @@ func createTestSeller(client sellerv1.SellerServiceClient) (string, string, erro
 	}
 
 	return resp.Seller.Id, resp.Seller.UserId, nil
+}
+
+func createTestLink(client sellerv1.SellerServiceClient) (string, string, error) {
+	sellerID, _, err := createTestSeller(client)
+	if err != nil {
+		fatal("failed to create test seller: %v\n", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req := &sellerv1.AddSocialLinkRequest{
+		SellerId: sellerID,
+		Type:     sellerv1.SocialLinkType_SOCIAL_LINK_TYPE_TELEGRAM,
+		Url:      uniqueValue("URL"),
+	}
+
+	resp, err := client.AddSocialLink(ctx, req)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to add social link: %v\n", err)
+
+	}
+
+	if resp == nil {
+		return "", "", fmt.Errorf("failed to add social link: unexpected nill response\n")
+	}
+
+	return resp.Link.SellerId, resp.Link.Id, nil
 }
 
 func uniqueValue(prefix string) string {

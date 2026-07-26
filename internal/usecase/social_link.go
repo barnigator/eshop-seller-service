@@ -44,7 +44,7 @@ func (uc *UseCase) AddSocialLink(ctx context.Context, sellerID string, linkType 
 }
 
 func (uc *UseCase) ListSocialLinks(ctx context.Context, sellerID string) ([]domain.SocialLink, error) {
-	if sellerID != "" {
+	if sellerID == "" {
 		return nil, domain.ErrSellerIDRequired
 	}
 
@@ -57,7 +57,7 @@ func (uc *UseCase) ListSocialLinks(ctx context.Context, sellerID string) ([]doma
 }
 
 func (uc *UseCase) DeleteSocialLink(ctx context.Context, linkID string) error {
-	if linkID != "" {
+	if linkID == "" {
 		return domain.ErrSocialLinkIDRequired
 	}
 
